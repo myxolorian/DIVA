@@ -3,6 +3,7 @@ using Diva.Api.Auth;
 using Diva.Api.Data;
 using Diva.Api.Features.Account;
 using Diva.Api.Features.Customers;
+using Diva.Api.Features.Orders;
 using Diva.Api.Features.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,9 @@ builder.Services.AddDbContext<DivaDbContext>(options =>
     options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
 builder.Services.AddDivaAuthentication(builder.Configuration, builder.Environment);
+
+// The clock as a service: endpoints ask it for "now", and tests can replace it.
+builder.Services.AddSingleton(TimeProvider.System);
 
 // Errors use the standard ProblemDetails JSON shape: { "title": ..., "status": ..., "errors": ... }.
 builder.Services.AddProblemDetails();
@@ -56,6 +60,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAccountEndpoints();
 app.MapCustomerEndpoints();
 app.MapServiceEndpoints();
+app.MapOrderEndpoints();
 
 app.Run();
 

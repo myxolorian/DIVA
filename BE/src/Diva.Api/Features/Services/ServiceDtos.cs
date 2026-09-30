@@ -92,7 +92,7 @@ public sealed record ValidService(
         {
             if (minQty <= 0 || minQty > MaxAllowedQty)
             {
-                errors.Add("minQty", $"Minimal order harus lebih dari 0 dan maksimal {MaxAllowedQty:N0}.");
+                errors.Add("minQty", $"Minimal order harus lebih dari 0 dan maksimal {Rupiah.Number(MaxAllowedQty)}.");
             }
             else if (decimal.Round(minQty, 2) != minQty)
             {
@@ -119,7 +119,7 @@ public sealed record ValidService(
     {
         if (value <= 0 || value > MaxAllowedPrice)
         {
-            errors.Add(field, $"Harga harus lebih dari 0 dan maksimal {MaxAllowedPrice:N0}.");
+            errors.Add(field, $"Harga harus lebih dari 0 dan maksimal {Rupiah.Number(MaxAllowedPrice)}.");
         }
         else if (decimal.Round(value, 2) != value)
         {

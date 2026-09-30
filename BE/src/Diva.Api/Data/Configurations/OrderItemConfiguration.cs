@@ -14,6 +14,8 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         b.Property(x => x.Unit).HasConversion<string>().HasMaxLength(10);
         b.Property(x => x.UnitPrice).HasPrecision(12, 2);
         b.Property(x => x.Qty).HasPrecision(8, 2);
+        b.Property(x => x.MinQty).HasPrecision(8, 2);
+        b.Property(x => x.BilledQty).HasPrecision(8, 2);
         b.Property(x => x.Subtotal).HasPrecision(12, 2);
 
         b.HasIndex(x => x.OrderId);

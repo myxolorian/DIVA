@@ -22,6 +22,10 @@
     {
       "key": "serviceId",
       "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
     }
   ],
   "item": [
@@ -294,6 +298,110 @@
             "header": [],
             "url": "{{baseUrl}}/api/customers/{{customerId}}",
             "description": "Soft delete: baris tetap ada dengan is_deleted = true."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "Buat order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"notes\": \"Pisahkan baju putih\",\n  \"items\": [\n    {\n      \"serviceId\": \"00000000-0000-0000-0000-000000000201\",\n      \"qty\": 2\n    },\n    {\n      \"serviceId\": \"00000000-0000-0000-0000-000000000219\",\n      \"qty\": 1,\n      \"unitPrice\": 100000\n    },\n    {\n      \"serviceId\": \"00000000-0000-0000-0000-000000000216\",\n      \"qty\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Jalankan Customer > Tambah customer dulu (mengisi `customerId`). Contoh: 2 kg Cuci Kering Setrika (ditagih minimum 3 kg = 21.000), Kebaya Payet dengan harga 100.000 (wajib `unitPrice` 60.000-150.000), Jas/Blazer 35.000. Total 156.000. Opsional: `dueDate` (\"2026-10-05\"), `paymentStatus` (BelumLunas/Lunas). Id order disimpan ke `orderId`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"orderId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders?page=1&pageSize=20",
+            "description": "Filter opsional: status, paymentStatus, customerId, search (nomor order / nama / telp), from & to (tanggal WIB, yyyy-MM-dd)."
+          }
+        },
+        {
+          "name": "Detail order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Ubah status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Diproses\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Baru, Diproses, Selesai, Diambil."
+          }
+        },
+        {
+          "name": "Ubah pembayaran",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/payment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentStatus\": \"Lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "BelumLunas atau Lunas."
           }
         }
       ]

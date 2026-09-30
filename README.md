@@ -15,7 +15,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 1: data layer (entity, migration, sequence nomor order, RLS, seed)
 - [x] Tahap 2: auth (JWT Supabase)
 - [x] Tahap 3: API customer dan jasa
-- [ ] Tahap 4: API order
+- [x] Tahap 4: API order
 - [ ] Tahap 5: receipt (JSON, PDF, link publik)
 - [ ] Tahap 6: API dashboard
 - [ ] Tahap 7: frontend
@@ -80,12 +80,12 @@ Data awal (seed): **21 jasa dari price list DIVA Laundry** (7 kategori, lihat `D
 
 ### Menerapkan migration baru ke Supabase
 
-Setiap kali ada migration baru (misalnya `RealPriceList`), database Supabase perlu diperbarui. Pilih salah satu:
+Setiap kali ada migration baru (misalnya `OrderItemBilling`), database Supabase perlu diperbarui. Pilih salah satu:
 
 - **SQL Editor (paling mudah):** buat script SQL dari migration terakhir yang sudah diterapkan, lalu paste di SQL Editor Supabase:
   ```bash
   cd BE/src/Diva.Api
-  dotnet ef migrations script EnableRowLevelSecurity RealPriceList
+  dotnet ef migrations script RealPriceList OrderItemBilling
   ```
   (Argumen pertama = migration terakhir yang sudah ada di database, kedua = tujuan.)
 - **Langsung dari laptop:** `DIVA_DB_CONNECTION="<connection string>" dotnet ef database update` (PowerShell: `$env:DIVA_DB_CONNECTION = '<connection string>'`, lalu `dotnet ef database update`).
@@ -163,8 +163,20 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | POST | `/api/customers` | Tambah customer: `{ "name", "phone", "address", "notes" }` |
 | PUT | `/api/customers/{id}` | Ubah customer |
 | DELETE | `/api/customers/{id}` | Hapus customer (soft delete: `is_deleted = true`) |
+| POST | `/api/orders` | Buat order: `{ "customerId", "items": [{ "serviceId", "qty", "unitPrice"? }], "notes"?, "dueDate"?, "paymentStatus"? }` |
+| GET | `/api/orders?status=&paymentStatus=&customerId=&search=&from=&to=&page=&pageSize=` | Daftar order, terbaru dulu; `search` = nomor order / nama / telp; `from`/`to` = tanggal WIB (`yyyy-MM-dd`) |
+| GET | `/api/orders/{id}` | Detail order + item |
+| PATCH | `/api/orders/{id}/status` | `{ "status": "Baru"\|"Diproses"\|"Selesai"\|"Diambil" }` |
+| PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }` |
 
 Aturan jasa: `minQty` = qty minimal yang ditagih (kiloan 3 kg, karpet 4 m²; qty lebih kecil ditagih sebesar minimum). `maxPrice` = batas atas untuk jasa berharga range (Dress Pesta/Kebaya Payet 60.000-150.000); harga sebenarnya diisi saat membuat order. Kedua aturan ini dipakai saat perhitungan order (tahap 4).
+
+Aturan order (dihitung di server, FE hanya mengirim jasa dan qty):
+- Qty di bawah `minQty` ditagih sebesar minimum: 2 kg Cuci Kering Setrika ditagih 3 kg (Rp21.000). Receipt menyimpan qty asli (`qty`) dan qty yang ditagih (`billedQty`).
+- Jasa ber-`maxPrice` (Kebaya Payet) wajib mengirim `unitPrice` dalam rentangnya; jasa berharga tetap menolak `unitPrice`.
+- Satuan Pcs harus bilangan bulat; Kg dan M2 boleh 2 desimal.
+- Nama, satuan, harga, dan minimum jasa disalin ke `order_items`, jadi perubahan harga jasa tidak mengubah order lama.
+- Nomor order `DIV-yyMMdd-NNNN`: tanggal WIB + penghitung dari sequence database (tidak reset harian, selalu unik). Setiap order punya `publicToken` acak untuk link receipt `/r/{token}` (halamannya di tahap 5).
 
 Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
 

@@ -14,7 +14,8 @@ public class Order
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.BelumLunas;
     public decimal Total { get; set; }
     public string? Notes { get; set; }
-    public DateTimeOffset? DueDate { get; set; }
+    /// <summary>Promised pick-up date (a calendar date in WIB, no time).</summary>
+    public DateOnly? DueDate { get; set; }
 
     /// <summary>Unguessable token (128-bit, base64url) used in the shareable receipt link.</summary>
     public required string PublicToken { get; set; }
