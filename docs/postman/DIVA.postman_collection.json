@@ -26,6 +26,10 @@
     {
       "key": "orderId",
       "value": ""
+    },
+    {
+      "key": "publicToken",
+      "value": ""
     }
   ],
   "item": [
@@ -325,7 +329,7 @@
                 }
               }
             },
-            "description": "Jalankan Customer > Tambah customer dulu (mengisi `customerId`). Contoh: 2 kg Cuci Kering Setrika (ditagih minimum 3 kg = 21.000), Kebaya Payet dengan harga 100.000 (wajib `unitPrice` 60.000-150.000), Jas/Blazer 35.000. Total 156.000. Opsional: `dueDate` (\"2026-10-05\"), `paymentStatus` (BelumLunas/Lunas). Id order disimpan ke `orderId`."
+            "description": "Jalankan Customer > Tambah customer dulu (mengisi `customerId`). Contoh: 2 kg Cuci Kering Setrika (ditagih minimum 3 kg = 21.000), Kebaya Payet dengan harga 100.000 (wajib `unitPrice` 60.000-150.000), Jas/Blazer 35.000. Total 156.000. Opsional: `dueDate` (\"2026-10-05\"), `paymentStatus` (BelumLunas/Lunas). Id order disimpan ke `orderId`. Token receipt disimpan ke `publicToken` (dipakai folder Receipt)."
           },
           "event": [
             {
@@ -334,7 +338,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set(\"orderId\", pm.response.json().id);",
+                  "    const order = pm.response.json();",
+                  "    pm.collectionVariables.set(\"orderId\", order.id);",
+                  "    pm.collectionVariables.set(\"publicToken\", order.publicToken);",
                   "}"
                 ]
               }
@@ -402,6 +408,84 @@
               }
             },
             "description": "BelumLunas atau Lunas."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Receipt (publik)",
+      "description": "Tanpa login: aksesnya hanya lewat token acak dari order. Jalankan Order > Buat order dulu.",
+      "item": [
+        {
+          "name": "Receipt JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/receipts/{{publicToken}}",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Data receipt untuk customer: telp disamarkan, tanpa alamat."
+          }
+        },
+        {
+          "name": "Receipt PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/receipts/{{publicToken}}/pdf",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Struk 80 mm. Di Postman klik Send and Download (panah di sebelah tombol Send) untuk menyimpan file PDF."
+          }
+        },
+        {
+          "name": "Halaman receipt (link share)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/r/{{publicToken}}",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Ini link yang dibagikan ke customer. Lebih enak dibuka di browser: salin URL-nya dan ganti {{baseUrl}} dengan http://localhost:5189."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Outlet",
+      "item": [
+        {
+          "name": "Profil outlet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/outlet"
+          }
+        },
+        {
+          "name": "Ubah profil outlet",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/outlet",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"DIVA Laundry\",\n  \"address\": \"Jl. ... (alamat laundry)\",\n  \"phone\": \"0812-0000-0000\",\n  \"receiptFooter\": \"Terima kasih telah mempercayakan cucian Anda kepada kami.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tampil di header dan footer setiap receipt. Wajib: name. Kosongkan kolom lain dengan null."
           }
         }
       ]

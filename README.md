@@ -16,7 +16,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 2: auth (JWT Supabase)
 - [x] Tahap 3: API customer dan jasa
 - [x] Tahap 4: API order
-- [ ] Tahap 5: receipt (JSON, PDF, link publik)
+- [x] Tahap 5: receipt (JSON, PDF, link publik)
 - [ ] Tahap 6: API dashboard
 - [ ] Tahap 7: frontend
 - [ ] Tahap 8-9: hardening dan deploy
@@ -28,7 +28,7 @@ BE/
   Diva.slnx
   src/Diva.Api/        # API: Domain/, Data/ (DbContext, Configurations, Migrations), Auth/, Features/
   tests/Diva.Tests/    # xUnit
-FE/                    # halaman Bootstrap (menyusul di tahap 7)
+FE/                    # halaman Bootstrap (receipt.html sudah ada; halaman lain di tahap 7)
 docs/postman/          # collection Postman siap-import
 Dockerfile             # build BE, salin FE ke wwwroot
 ```
@@ -168,6 +168,16 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | GET | `/api/orders/{id}` | Detail order + item |
 | PATCH | `/api/orders/{id}/status` | `{ "status": "Baru"\|"Diproses"\|"Selesai"\|"Diambil" }` |
 | PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }` |
+| GET | `/api/outlet` | Profil laundry (nama, alamat, telp, footer receipt) |
+| PUT | `/api/outlet` | Ubah profil laundry |
+
+**Tanpa login** (akses hanya lewat token acak order, dibatasi 60 request/menit per IP, tidak di-cache, `noindex`):
+
+| Method | URL | Keterangan |
+|---|---|---|
+| GET | `/r/{token}` | **Link yang dibagikan ke customer**: halaman receipt (`FE/receipt.html`) dengan tombol Unduh PDF, Salin link, Bagikan |
+| GET | `/api/public/receipts/{token}` | Data receipt (JSON). Telp customer disamarkan (`0812*****890`), tanpa alamat dan tanpa id |
+| GET | `/api/public/receipts/{token}/pdf` | Receipt PDF format struk 80 mm, nama file = nomor order |
 
 Aturan jasa: `minQty` = qty minimal yang ditagih (kiloan 3 kg, karpet 4 m²; qty lebih kecil ditagih sebesar minimum). `maxPrice` = batas atas untuk jasa berharga range (Dress Pesta/Kebaya Payet 60.000-150.000); harga sebenarnya diisi saat membuat order. Kedua aturan ini dipakai saat perhitungan order (tahap 4).
 
@@ -176,13 +186,21 @@ Aturan order (dihitung di server, FE hanya mengirim jasa dan qty):
 - Jasa ber-`maxPrice` (Kebaya Payet) wajib mengirim `unitPrice` dalam rentangnya; jasa berharga tetap menolak `unitPrice`.
 - Satuan Pcs harus bilangan bulat; Kg dan M2 boleh 2 desimal.
 - Nama, satuan, harga, dan minimum jasa disalin ke `order_items`, jadi perubahan harga jasa tidak mengubah order lama.
-- Nomor order `DIV-yyMMdd-NNNN`: tanggal WIB + penghitung dari sequence database (tidak reset harian, selalu unik). Setiap order punya `publicToken` acak untuk link receipt `/r/{token}` (halamannya di tahap 5).
+- Nomor order `DIV-yyMMdd-NNNN`: tanggal WIB + penghitung dari sequence database (tidak reset harian, selalu unik). Setiap order punya `publicToken` acak untuk link receipt `/r/{token}`.
 
 Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
 
 ### Postman
 
 Import `docs/postman/DIVA.postman_collection.json` (Postman > **Import**). Collection ini memakai environment `DIVA Local` (`baseUrl`, `supabaseUrl`, `publishableKey`, `ownerEmail`, `ownerPassword`, `token`). Jalankan **Auth > Login Supabase** dulu; request lain otomatis memakai token itu. Request "Tambah jasa" dan "Tambah customer" menyimpan id hasilnya supaya request Detail/Ubah/Hapus langsung bisa dipakai.
+
+## Frontend
+
+File di `FE/` disajikan oleh API yang sama (satu alamat untuk API dan halaman web). Saat development, API membaca langsung dari folder `FE/` repo (`Frontend:Path` di `appsettings.Development.json`); di Docker, isinya disalin ke `wwwroot`. File statis ini publik, sedangkan datanya tetap dilindungi login di API.
+
+Bootstrap dimuat dari CDN jsDelivr dengan atribut `integrity` (SRI), sehingga browser menolak file yang isinya berubah.
+
+PDF dibuat dengan QuestPDF (lisensi Community: gratis untuk usaha dengan omzet di bawah USD 1 juta/tahun).
 
 ## Menjalankan
 
