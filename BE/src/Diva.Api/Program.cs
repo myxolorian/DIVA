@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Diva.Api.Auth;
 using Diva.Api.Data;
 using Diva.Api.Features.Account;
+using Diva.Api.Features.AppConfig;
 using Diva.Api.Features.Customers;
 using Diva.Api.Features.Dashboard;
 using Diva.Api.Features.Orders;
@@ -83,7 +84,13 @@ if (Directory.Exists(frontendPath))
 {
     var files = new PhysicalFileProvider(frontendPath);
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = files });
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = files,
+        // "no-cache" = the browser may keep a copy but must check with the server first, so a new
+        // version of a page or script is picked up right after an update.
+        OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache",
+    });
 }
 
 app.UseRateLimiter();
@@ -94,6 +101,7 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAccountEndpoints();
+app.MapAppConfigEndpoints();
 app.MapCustomerEndpoints();
 app.MapServiceEndpoints();
 app.MapOrderEndpoints();

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Pengaturan · DIVA Laundry</title>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/diva.css">
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <script type="module" src="/assets/js/pages/settings.js"></script>
+</head>
+<body>
+  <main class="app-main">
+    <header class="page-header"><h1>Lainnya</h1></header>
+    <div class="list-card mb-4">
+      <a class="list-row" href="/services.html">
+        <span class="avatar"><i class="bi bi-tags"></i></span>
+        <span class="grow"><span class="title d-block">Jasa &amp; Harga</span><span class="sub d-block">Ubah harga, tambah atau nonaktifkan jasa</span></span>
+        <i class="bi bi-chevron-right muted"></i>
+      </a>
+      <a class="list-row" href="/customers.html">
+        <span class="avatar"><i class="bi bi-people"></i></span>
+        <span class="grow"><span class="title d-block">Customer</span><span class="sub d-block">Daftar customer tersimpan</span></span>
+        <i class="bi bi-chevron-right muted"></i>
+      </a>
+    </div>
+
+    <h2 class="section-title">Profil laundry</h2>
+    <p class="small muted">Tampil di bagian atas dan bawah setiap receipt.</p>
+    <form id="outlet-form" class="card-soft p-3 p-md-4 mb-4" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="name">Nama laundry</label>
+        <input class="form-control" id="name" name="name" required maxlength="120">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="address">Alamat</label>
+        <textarea class="form-control" id="address" name="address" rows="2" maxlength="300"></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="phone">No. telepon / WhatsApp</label>
+        <input class="form-control" id="phone" name="phone" inputmode="tel" maxlength="30">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="receiptFooter">Pesan penutup receipt</label>
+        <textarea class="form-control" id="receiptFooter" name="receiptFooter" rows="2" maxlength="300"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit" id="save">Simpan profil</button>
+    </form>
+
+    <h2 class="section-title">Akun</h2>
+    <div class="list-card mb-4">
+      <div class="list-row">
+        <span class="avatar"><i class="bi bi-person"></i></span>
+        <span class="grow"><span class="title d-block" id="account-email">…</span><span class="sub d-block">Owner</span></span>
+      </div>
+      <button class="list-row text-danger" id="logout" type="button">
+        <span class="avatar bg-danger-subtle text-danger"><i class="bi bi-box-arrow-right"></i></span>
+        <span class="grow title">Keluar</span>
+      </button>
+    </div>
+  </main>
+</body>
+</html>

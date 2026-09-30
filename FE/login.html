@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Masuk · DIVA Laundry</title>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/diva.css">
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <script type="module" src="/assets/js/pages/login.js"></script>
+</head>
+<body>
+  <main class="auth-page">
+    <div class="auth-card">
+      <div class="text-center mb-4">
+        <div class="auth-brand">DIVA<span>.</span></div>
+        <div class="muted">Laundry Management</div>
+      </div>
+      <div class="card-soft p-4 shadow-sm">
+        <h1 class="h5 fw-bold mb-1">Masuk</h1>
+        <p class="small muted mb-4">Gunakan akun owner yang dibuat di Supabase.</p>
+        <div id="dev-notice" class="alert alert-warning small d-none" role="status">
+          <i class="bi bi-cone-striped me-1"></i> Mode development: login dilewati (<code>Auth:DevBypass</code>).
+          <a href="/" class="alert-link d-block mt-1">Masuk tanpa login →</a>
+        </div>
+        <form id="login-form" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control form-control-lg" id="email" name="email" type="email" autocomplete="username" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-group">
+              <input class="form-control form-control-lg" id="password" name="password" type="password" autocomplete="current-password" required>
+              <button class="btn btn-outline-secondary" type="button" id="toggle-password" aria-label="Tampilkan password"><i class="bi bi-eye"></i></button>
+            </div>
+          </div>
+          <div id="login-error" class="alert alert-danger small d-none" role="alert"></div>
+          <button class="btn btn-primary btn-lg w-100" type="submit" id="login-button">Masuk</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

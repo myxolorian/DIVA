@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Order · DIVA Laundry</title>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/diva.css">
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <script type="module" src="/assets/js/pages/orders.js"></script>
+</head>
+<body>
+  <main class="app-main">
+    <header class="page-header">
+      <h1 class="flex-grow-1">Order</h1>
+      <a class="btn btn-primary d-inline-flex align-items-center gap-1" href="/order-new.html"><i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline"> Buat Order</span></a>
+    </header>
+    <div class="search mb-3">
+      <i class="bi bi-search"></i>
+      <input class="form-control" id="search" type="search" placeholder="Cari nomor order, nama, atau no. telp" aria-label="Cari order">
+    </div>
+    <div class="chips mb-2" id="status-chips" role="group" aria-label="Filter status"></div>
+    <div class="chips mb-3" id="payment-chips" role="group" aria-label="Filter pembayaran"></div>
+    <div id="customer-filter"></div>
+    <div id="list" aria-live="polite"></div>
+    <div class="text-center mt-3"><button class="btn btn-light d-none" id="more">Muat lebih banyak</button></div>
+  </main>
+</body>
+</html>

@@ -18,7 +18,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 4: API order
 - [x] Tahap 5: receipt (JSON, PDF, link publik)
 - [x] Tahap 6: API dashboard
-- [ ] Tahap 7: frontend
+- [x] Tahap 7: frontend
 - [ ] Tahap 8-9: hardening dan deploy
 
 ## Struktur
@@ -28,7 +28,7 @@ BE/
   Diva.slnx
   src/Diva.Api/        # API: Domain/, Data/ (DbContext, Configurations, Migrations), Auth/, Features/
   tests/Diva.Tests/    # xUnit
-FE/                    # halaman Bootstrap (receipt.html sudah ada; halaman lain di tahap 7)
+FE/                    # halaman Bootstrap + JavaScript (assets/js/pages/ = satu script per halaman)
 docs/postman/          # collection Postman siap-import
 Dockerfile             # build BE, salin FE ke wwwroot
 ```
@@ -152,6 +152,7 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | Method | URL | Keterangan |
 |---|---|---|
 | GET | `/health` | Tanpa login. Cek server hidup |
+| GET | `/api/public/config` | Tanpa login. Alamat Supabase + publishable key untuk halaman login (tidak ada yang rahasia) |
 | GET | `/api/me` | User yang sedang login |
 | GET | `/api/services?includeInactive=false` | Daftar jasa, urut seperti price list (`sortOrder`) |
 | GET | `/api/services/{id}` | Detail jasa |
@@ -210,7 +211,25 @@ Import `docs/postman/DIVA.postman_collection.json` (Postman > **Import**). Colle
 
 File di `FE/` disajikan oleh API yang sama (satu alamat untuk API dan halaman web). Saat development, API membaca langsung dari folder `FE/` repo (`Frontend:Path` di `appsettings.Development.json`); di Docker, isinya disalin ke `wwwroot`. File statis ini publik, sedangkan datanya tetap dilindungi login di API.
 
-Bootstrap dimuat dari CDN jsDelivr dengan atribut `integrity` (SRI), sehingga browser menolak file yang isinya berubah.
+Cara membuka: jalankan API (lihat **Menjalankan**), lalu buka `http://localhost:5189` di browser dan login dengan akun owner Supabase.
+
+| Halaman | Isi |
+|---|---|
+| `login.html` | Login email + password (langsung ke Supabase Auth, token disimpan di browser) |
+| `index.html` | Beranda: nilai order hari ini, belum lunas, siap diambil, status order, grafik 7 hari, order terbaru, peringatan order terlambat |
+| `order-new.html` | Buat order 3 langkah: pilih/tambah customer → pilih jasa + qty (dikelompokkan per kategori) → tanggal selesai, pembayaran, catatan |
+| `order.html?id=` | Detail order: ubah status, tandai lunas, kirim receipt lewat WhatsApp, salin link, unduh PDF |
+| `orders.html` | Daftar order dengan filter status / pembayaran dan pencarian |
+| `customers.html` | Customer tersimpan: cari, tambah, ubah, hapus, buat order, WhatsApp/telepon |
+| `services.html` | Jasa & harga: ubah harga, tambah jasa, nonaktifkan |
+| `settings.html` | Profil laundry (tampil di receipt) dan logout |
+| `receipt.html` | Receipt publik untuk customer (`/r/{token}`) |
+
+Tampilan dibuat untuk HP dulu (navigasi bawah + tombol "+" di tengah), lalu melebar menjadi sidebar di layar ≥ 992px.
+
+Bootstrap 5.3.8, Bootstrap Icons 1.13.1, dan huruf Plus Jakarta Sans disimpan di `FE/assets/vendor/` (bukan CDN), jadi aplikasi tidak bergantung pada server pihak ketiga. Semua teks dari database ditulis lewat `textContent` (bukan `innerHTML`), sehingga isian seperti nama customer tidak bisa menyisipkan script. Halaman dikirim dengan `Cache-Control: no-cache`: browser selalu mengecek versi terbaru setelah ada update.
+
+Setelah login, `assets/js/api.js` otomatis menambahkan token ke setiap request, memperbarui token yang hampir kedaluwarsa, dan kembali ke halaman login kalau API membalas 401.
 
 PDF dibuat dengan QuestPDF (lisensi Community: gratis untuk usaha dengan omzet di bawah USD 1 juta/tahun).
 

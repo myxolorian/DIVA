@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Buat Order · DIVA Laundry</title>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/diva.css">
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <script type="module" src="/assets/js/pages/order-new.js"></script>
+</head>
+<body>
+  <main class="app-main has-action-bar">
+    <header class="page-header">
+      <button class="back" id="back" type="button" aria-label="Kembali"><i class="bi bi-arrow-left"></i></button>
+      <h1 class="flex-grow-1">Buat Order</h1>
+    </header>
+    <div class="steps" id="steps"></div>
+    <section id="step-customer"></section>
+    <section id="step-services" class="d-none"></section>
+    <section id="step-review" class="d-none"></section>
+  </main>
+  <div class="action-bar d-none" id="action-bar">
+    <div class="inner">
+      <div class="flex-grow-1 min-w-0">
+        <div class="total-label" id="action-label">Total</div>
+        <div class="total num" id="action-total">Rp 0</div>
+      </div>
+      <button class="btn btn-primary btn-lg px-4" id="action-button" type="button">Lanjut</button>
+    </div>
+  </div>
+</body>
+</html>
