@@ -1,0 +1,517 @@
+{
+  "info": {
+    "name": "DIVA",
+    "description": "Request untuk API DIVA. Butuh environment `DIVA Local` (baseUrl, supabaseUrl, publishableKey, ownerEmail, ownerPassword, token). Jalankan `Auth > Login Supabase` dulu; request lain otomatis memakai token itu.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "customerId",
+      "value": ""
+    },
+    {
+      "key": "serviceId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "publicToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Harus 200."
+          }
+        },
+        {
+          "name": "Me tanpa login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/me",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Harus 401."
+          }
+        },
+        {
+          "name": "Login Supabase",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "apikey",
+                "value": "{{publishableKey}}"
+              }
+            ],
+            "url": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{ownerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Ke Supabase, bukan ke API DIVA. Menyimpan access token ke variable environment `token` (berlaku ±1 jam)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set(\"token\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me dengan login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/me",
+            "description": "Harus 200 dengan id dan email owner."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Ringkasan hari ini",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary",
+            "description": "Angka untuk halaman depan: order & nilai order hari ini (WIB), piutang, jumlah per status, jatuh tempo hari ini, terlambat, 7 hari terakhir, 5 order terbaru."
+          }
+        },
+        {
+          "name": "Ringkasan tanggal tertentu",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary?date=2026-10-01",
+            "description": "Ganti tanggal (yyyy-MM-dd, WIB)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jasa",
+      "item": [
+        {
+          "name": "List jasa aktif",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/services"
+          }
+        },
+        {
+          "name": "List semua jasa (termasuk nonaktif)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/services?includeInactive=true"
+          }
+        },
+        {
+          "name": "Tambah jasa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/services",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cuci Sepatu\",\n  \"category\": \"Sepatu\",\n  \"unit\": \"Pcs\",\n  \"price\": 35000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Wajib: name, category, unit (Kg/Pcs/M2), price. Opsional: minQty (minimal qty yang ditagih), maxPrice (untuk harga range; harga asli diisi saat order), sortOrder (urutan tampil; kosong = paling akhir). Id jasa baru disimpan ke variable collection `serviceId`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"serviceId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail jasa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/services/{{serviceId}}"
+          }
+        },
+        {
+          "name": "Ubah jasa",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/services/{{serviceId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cuci Sepatu\",\n  \"category\": \"Sepatu\",\n  \"unit\": \"Pcs\",\n  \"price\": 40000,\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "PUT mengganti seluruh data jasa: kirim semua kolom. minQty/maxPrice yang tidak dikirim akan dikosongkan; sortOrder dan isActive yang tidak dikirim tetap seperti sebelumnya."
+          }
+        },
+        {
+          "name": "Nonaktifkan jasa",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/services/{{serviceId}}",
+            "description": "Tidak menghapus baris, hanya is_active = false."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "item": [
+        {
+          "name": "List customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/customers?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "Cari customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/customers?search=budi",
+            "description": "Cocok dengan sebagian nama atau no. telepon."
+          }
+        },
+        {
+          "name": "Tambah customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"phone\": \"0812-3456-7890\",\n  \"address\": \"Jl. Kenanga 3\",\n  \"notes\": \"Tanpa pewangi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Telp disimpan tanpa pemisah (081234567890). Telp yang sudah dipakai customer lain: 409. Id disimpan ke `customerId`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"customerId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/customers/{{customerId}}"
+          }
+        },
+        {
+          "name": "Ubah customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/{{customerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"phone\": \"081234567890\",\n  \"address\": \"Jl. Kenanga 5\",\n  \"notes\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Hapus customer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/customers/{{customerId}}",
+            "description": "Soft delete: baris tetap ada dengan is_deleted = true."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "Buat order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"notes\": \"Pisahkan baju putih\",\n  \"items\": [\n    {\n      \"serviceId\": \"00000000-0000-0000-0000-000000000201\",\n      \"qty\": 2\n    },\n    {\n      \"serviceId\": \"00000000-0000-0000-0000-000000000219\",\n      \"qty\": 1,\n      \"unitPrice\": 100000\n    },\n    {\n      \"serviceId\": \"00000000-0000-0000-0000-000000000216\",\n      \"qty\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Jalankan Customer > Tambah customer dulu (mengisi `customerId`). Contoh: 2 kg Cuci Kering Setrika (ditagih minimum 3 kg = 21.000), Kebaya Payet dengan harga 100.000 (wajib `unitPrice` 60.000-150.000), Jas/Blazer 35.000. Total 156.000. Opsional: `dueDate` (\"2026-10-05\"), `paymentStatus` (BelumLunas/Lunas). Id order disimpan ke `orderId`. Token receipt disimpan ke `publicToken` (dipakai folder Receipt)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const order = pm.response.json();",
+                  "    pm.collectionVariables.set(\"orderId\", order.id);",
+                  "    pm.collectionVariables.set(\"publicToken\", order.publicToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders?page=1&pageSize=20",
+            "description": "Filter opsional: status, paymentStatus, customerId, search (nomor order / nama / telp), from & to (tanggal WIB, yyyy-MM-dd)."
+          }
+        },
+        {
+          "name": "Detail order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Ubah status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Diproses\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Baru, Diproses, Selesai, Diambil."
+          }
+        },
+        {
+          "name": "Ubah pembayaran",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/payment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentStatus\": \"Lunas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "BelumLunas atau Lunas."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Receipt (publik)",
+      "description": "Tanpa login: aksesnya hanya lewat token acak dari order. Jalankan Order > Buat order dulu.",
+      "item": [
+        {
+          "name": "Receipt JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/receipts/{{publicToken}}",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Data receipt untuk customer: telp disamarkan, tanpa alamat."
+          }
+        },
+        {
+          "name": "Receipt PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/receipts/{{publicToken}}/pdf",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Struk 80 mm. Di Postman klik Send and Download (panah di sebelah tombol Send) untuk menyimpan file PDF."
+          }
+        },
+        {
+          "name": "Halaman receipt (link share)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/r/{{publicToken}}",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Ini link yang dibagikan ke customer. Lebih enak dibuka di browser: salin URL-nya dan ganti {{baseUrl}} dengan http://localhost:5189."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Outlet",
+      "item": [
+        {
+          "name": "Profil outlet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/outlet"
+          }
+        },
+        {
+          "name": "Ubah profil outlet",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/outlet",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"DIVA Laundry\",\n  \"address\": \"Jl. ... (alamat laundry)\",\n  \"phone\": \"0812-0000-0000\",\n  \"receiptFooter\": \"Terima kasih telah mempercayakan cucian Anda kepada kami.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tampil di header dan footer setiap receipt. Wajib: name. Kosongkan kolom lain dengan null."
+          }
+        }
+      ]
+    }
+  ]
+}
