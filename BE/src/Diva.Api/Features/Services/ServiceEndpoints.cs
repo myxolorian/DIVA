@@ -30,9 +30,11 @@ public static class ServiceEndpoints
             query = query.Where(s => s.IsActive);
         }
 
+        // Same order as the printed price list; the frontend groups by Category.
         var items = await query
-            .OrderBy(s => s.Name)
-            .Select(s => new ServiceResponse(s.Id, s.Name, s.Unit, s.Price, s.IsActive))
+            .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
+            .Select(s => new ServiceResponse(
+                s.Id, s.Name, s.Category, s.SortOrder, s.Unit, s.Price, s.MaxPrice, s.MinQty, s.IsActive))
             .ToListAsync(ct);
 
         return Results.Ok(items);
@@ -55,8 +57,13 @@ public static class ServiceEndpoints
         var service = new LaundryService
         {
             Name = valid!.Name,
+            Category = valid.Category,
             Unit = valid.Unit,
             Price = valid.Price,
+            MaxPrice = valid.MaxPrice,
+            MinQty = valid.MinQty,
+            // Without an explicit position a new service goes to the end of the list.
+            SortOrder = valid.SortOrder ?? await NextSortOrder(db, ct),
             IsActive = valid.IsActive ?? true,
         };
         db.Services.Add(service);
@@ -80,14 +87,22 @@ public static class ServiceEndpoints
         }
 
         // Changing the price here does not touch old orders: they keep their own copy of the price.
+        // PUT replaces the whole service, so leaving maxPrice/minQty out clears them.
         service.Name = valid!.Name;
+        service.Category = valid.Category;
         service.Unit = valid.Unit;
         service.Price = valid.Price;
+        service.MaxPrice = valid.MaxPrice;
+        service.MinQty = valid.MinQty;
+        service.SortOrder = valid.SortOrder ?? service.SortOrder;
         service.IsActive = valid.IsActive ?? service.IsActive;
         await db.SaveChangesAsync(ct);
 
         return Results.Ok(ServiceResponse.From(service));
     }
+
+    private static async Task<int> NextSortOrder(DivaDbContext db, CancellationToken ct) =>
+        (await db.Services.MaxAsync(s => (int?)s.SortOrder, ct) ?? 0) + 10;
 
     private static async Task<IResult> Deactivate(Guid id, DivaDbContext db, CancellationToken ct)
     {

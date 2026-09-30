@@ -1,5 +1,7 @@
 using Diva.Api.Data;
 using Diva.Api.Data.Migrations;
+using Diva.Api.Features.Services;
+using static Diva.Api.Data.Configurations.LaundryServiceConfiguration;
 using Diva.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -81,9 +83,39 @@ public class DataModelTests
         var services = model.FindEntityType(typeof(LaundryService))!.GetSeedData().ToList();
         var outlet = model.FindEntityType(typeof(OutletProfile))!.GetSeedData().Single();
 
-        Assert.Equal(6, services.Count);
-        Assert.All(services, s => Assert.True((decimal)s[nameof(LaundryService.Price)]! > 0));
+        Assert.Equal(PriceList.Services.Length, services.Count);
         Assert.Equal(OutletProfile.SingletonId, outlet[nameof(OutletProfile.Id)]);
+    }
+
+    [Fact]
+    public void Price_list_has_the_21_services_of_the_printed_list()
+    {
+        Assert.Equal(21, PriceList.Services.Length);
+        Assert.Equal(21, PriceList.Services.Select(s => s.Id).Distinct().Count());
+        Assert.Equal(21, PriceList.Services.Select(s => s.SortOrder).Distinct().Count());
+
+        Assert.Equal(
+            [PriceList.Kiloan, PriceList.BedCover, PriceList.Selimut, PriceList.Karpet, PriceList.Satuan, PriceList.Formal, PriceList.Dress],
+            PriceList.Services.OrderBy(s => s.SortOrder).Select(s => s.Category).Distinct());
+
+        // The rules printed on the list: kiloan minimum 3 kg, karpet minimum 4 m2, kebaya payet 60-150 ribu.
+        Assert.All(PriceList.Services.Where(s => s.Category == PriceList.Kiloan), s => Assert.Equal((ServiceUnit.Kg, 3m), (s.Unit, s.MinQty)));
+        Assert.All(PriceList.Services.Where(s => s.Category == PriceList.Karpet), s => Assert.Equal((ServiceUnit.M2, 4m), (s.Unit, s.MinQty)));
+        var ranged = Assert.Single(PriceList.Services, s => s.MaxPrice is not null);
+        Assert.Equal(("Dress Pesta/Kebaya Payet", 60_000m, 150_000m), (ranged.Name, ranged.Price, ranged.MaxPrice!.Value));
+    }
+
+    [Fact]
+    public void Every_seeded_service_would_pass_the_api_validation()
+    {
+        // Keeps the seed and the rules for POST/PUT /api/services from drifting apart.
+        Assert.All(PriceList.Services, s =>
+        {
+            var errors = ValidService.Validate(
+                new ServiceRequest(s.Name, s.Category, s.Unit, s.Price, s.MaxPrice, s.MinQty, s.SortOrder, s.IsActive),
+                out _);
+            Assert.True(errors.IsValid, s.Name);
+        });
     }
 
     [Fact]

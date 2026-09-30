@@ -136,14 +136,14 @@
             "url": "{{baseUrl}}/api/services",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Karpet\",\n  \"unit\": \"M2\",\n  \"price\": 15000\n}",
+              "raw": "{\n  \"name\": \"Cuci Sepatu\",\n  \"category\": \"Sepatu\",\n  \"unit\": \"Pcs\",\n  \"price\": 35000\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "unit: Kg, Pcs, atau M2. Id jasa baru disimpan ke variable collection `serviceId`."
+            "description": "Wajib: name, category, unit (Kg/Pcs/M2), price. Opsional: minQty (minimal qty yang ditagih), maxPrice (untuk harga range; harga asli diisi saat order), sortOrder (urutan tampil; kosong = paling akhir). Id jasa baru disimpan ke variable collection `serviceId`."
           },
           "event": [
             {
@@ -180,13 +180,14 @@
             "url": "{{baseUrl}}/api/services/{{serviceId}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Karpet\",\n  \"unit\": \"M2\",\n  \"price\": 17500,\n  \"isActive\": true\n}",
+              "raw": "{\n  \"name\": \"Cuci Sepatu\",\n  \"category\": \"Sepatu\",\n  \"unit\": \"Pcs\",\n  \"price\": 40000,\n  \"isActive\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "PUT mengganti seluruh data jasa: kirim semua kolom. minQty/maxPrice yang tidak dikirim akan dikosongkan; sortOrder dan isActive yang tidak dikirim tetap seperti sebelumnya."
           }
         },
         {

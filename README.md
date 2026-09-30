@@ -76,7 +76,21 @@ Kalau tabel sudah dibuat lewat SQL Editor Supabase (SQL yang sama dengan migrati
 
 Migration `EnableRowLevelSecurity` mengaktifkan RLS tanpa policy di semua tabel. Supabase membuka tabel di schema `public` lewat REST API-nya, jadi tanpa RLS siapa pun yang punya anon key bisa membaca data. Dengan RLS, hanya API di repo ini (yang konek sebagai `postgres`) yang bisa mengakses data. **Tabel baru harus ikut ditambahkan ke daftar `Tables` di migration tersebut lewat migration baru**; ada tes yang gagal kalau ada tabel yang terlewat.
 
-Data awal (seed): 6 jasa dengan harga contoh dan satu baris `outlet_profile` ("DIVA Laundry"). Ubah lewat aplikasi setelah fitur pengaturan dan jasa jadi.
+Data awal (seed): **21 jasa dari price list DIVA Laundry** (7 kategori, lihat `Data/Configurations/LaundryServiceConfiguration.cs`) dan satu baris `outlet_profile` ("DIVA Laundry"). Setelah database dibuat, ubah harga lewat API (`PUT /api/services/{id}`), bukan di file seed.
+
+### Menerapkan migration baru ke Supabase
+
+Setiap kali ada migration baru (misalnya `RealPriceList`), database Supabase perlu diperbarui. Pilih salah satu:
+
+- **SQL Editor (paling mudah):** buat script SQL dari migration terakhir yang sudah diterapkan, lalu paste di SQL Editor Supabase:
+  ```bash
+  cd BE/src/Diva.Api
+  dotnet ef migrations script EnableRowLevelSecurity RealPriceList
+  ```
+  (Argumen pertama = migration terakhir yang sudah ada di database, kedua = tujuan.)
+- **Langsung dari laptop:** `DIVA_DB_CONNECTION="<connection string>" dotnet ef database update` (PowerShell: `$env:DIVA_DB_CONNECTION = '<connection string>'`, lalu `dotnet ef database update`).
+
+Cek hasilnya di tabel `__EFMigrationsHistory`: nama migration baru harus tercatat.
 
 ## Auth (login)
 
@@ -139,9 +153,9 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 |---|---|---|
 | GET | `/health` | Tanpa login. Cek server hidup |
 | GET | `/api/me` | User yang sedang login |
-| GET | `/api/services?includeInactive=false` | Daftar jasa, urut nama |
+| GET | `/api/services?includeInactive=false` | Daftar jasa, urut seperti price list (`sortOrder`) |
 | GET | `/api/services/{id}` | Detail jasa |
-| POST | `/api/services` | Tambah jasa: `{ "name", "unit": "Kg"\|"Pcs"\|"M2", "price" }` |
+| POST | `/api/services` | Tambah jasa: `{ "name", "category", "unit": "Kg"\|"Pcs"\|"M2", "price", "minQty"?, "maxPrice"?, "sortOrder"? }` |
 | PUT | `/api/services/{id}` | Ubah jasa (boleh sertakan `isActive`) |
 | DELETE | `/api/services/{id}` | Nonaktifkan jasa (tidak dihapus, supaya order lama tetap utuh) |
 | GET | `/api/customers?search=&page=1&pageSize=20` | Daftar customer aktif; `search` mencocokkan sebagian nama atau no. telp |
@@ -149,6 +163,8 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | POST | `/api/customers` | Tambah customer: `{ "name", "phone", "address", "notes" }` |
 | PUT | `/api/customers/{id}` | Ubah customer |
 | DELETE | `/api/customers/{id}` | Hapus customer (soft delete: `is_deleted = true`) |
+
+Aturan jasa: `minQty` = qty minimal yang ditagih (kiloan 3 kg, karpet 4 m²; qty lebih kecil ditagih sebesar minimum). `maxPrice` = batas atas untuk jasa berharga range (Dress Pesta/Kebaya Payet 60.000-150.000); harga sebenarnya diisi saat membuat order. Kedua aturan ini dipakai saat perhitungan order (tahap 4).
 
 Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
 
