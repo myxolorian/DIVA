@@ -17,7 +17,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 3: API customer dan jasa
 - [x] Tahap 4: API order
 - [x] Tahap 5: receipt (JSON, PDF, link publik)
-- [ ] Tahap 6: API dashboard
+- [x] Tahap 6: API dashboard
 - [ ] Tahap 7: frontend
 - [ ] Tahap 8-9: hardening dan deploy
 
@@ -168,6 +168,7 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | GET | `/api/orders/{id}` | Detail order + item |
 | PATCH | `/api/orders/{id}/status` | `{ "status": "Baru"\|"Diproses"\|"Selesai"\|"Diambil" }` |
 | PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }` |
+| GET | `/api/dashboard/summary?date=` | Ringkasan untuk halaman depan (lihat di bawah); `date` = tanggal WIB `yyyy-MM-dd`, default hari ini |
 | GET | `/api/outlet` | Profil laundry (nama, alamat, telp, footer receipt) |
 | PUT | `/api/outlet` | Ubah profil laundry |
 
@@ -187,6 +188,17 @@ Aturan order (dihitung di server, FE hanya mengirim jasa dan qty):
 - Satuan Pcs harus bilangan bulat; Kg dan M2 boleh 2 desimal.
 - Nama, satuan, harga, dan minimum jasa disalin ke `order_items`, jadi perubahan harga jasa tidak mengubah order lama.
 - Nomor order `DIV-yyMMdd-NNNN`: tanggal WIB + penghitung dari sequence database (tidak reset harian, selalu unik). Setiap order punya `publicToken` acak untuk link receipt `/r/{token}`.
+
+Isi ringkasan dashboard:
+
+| Field | Arti |
+|---|---|
+| `today` | Order yang **masuk** pada tanggal itu (WIB): jumlah, nilai total, dan pecahannya menurut status bayar saat ini (`paidTotal` / `unpaidTotal`). Ini nilai order, bukan uang yang diterima hari itu (waktu pembayaran belum dicatat). |
+| `unpaid` | Semua order yang masih `BelumLunas` (piutang), dari semua tanggal |
+| `statusCounts` | Jumlah order per status, dari semua tanggal |
+| `dueToday` / `overdue` | Order berstatus Baru/Diproses yang tanggal selesainya hari ini / sudah lewat |
+| `last7Days` | 7 hari sampai tanggal itu, termasuk hari tanpa order (nilai 0) |
+| `recentOrders` | 5 order terbaru, bentuknya sama dengan list order |
 
 Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
 

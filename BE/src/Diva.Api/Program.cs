@@ -4,6 +4,7 @@ using Diva.Api.Auth;
 using Diva.Api.Data;
 using Diva.Api.Features.Account;
 using Diva.Api.Features.Customers;
+using Diva.Api.Features.Dashboard;
 using Diva.Api.Features.Orders;
 using Diva.Api.Features.Outlet;
 using Diva.Api.Features.Receipts;
@@ -96,6 +97,7 @@ app.MapAccountEndpoints();
 app.MapCustomerEndpoints();
 app.MapServiceEndpoints();
 app.MapOrderEndpoints();
+app.MapDashboardEndpoints();
 app.MapOutletEndpoints();
 app.MapReceiptEndpoints(frontendPath);
 

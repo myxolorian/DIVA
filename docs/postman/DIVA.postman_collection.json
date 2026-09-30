@@ -113,6 +113,29 @@
       ]
     },
     {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Ringkasan hari ini",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary",
+            "description": "Angka untuk halaman depan: order & nilai order hari ini (WIB), piutang, jumlah per status, jatuh tempo hari ini, terlambat, 7 hari terakhir, 5 order terbaru."
+          }
+        },
+        {
+          "name": "Ringkasan tanggal tertentu",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/summary?date=2026-10-01",
+            "description": "Ganti tanggal (yyyy-MM-dd, WIB)."
+          }
+        }
+      ]
+    },
+    {
       "name": "Jasa",
       "item": [
         {

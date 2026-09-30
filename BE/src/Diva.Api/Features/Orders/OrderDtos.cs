@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Diva.Api.Domain;
 
 namespace Diva.Api.Features.Orders;
@@ -75,4 +76,22 @@ public sealed record OrderSummaryResponse(
     decimal Total,
     int ItemCount,
     DateOnly? DueDate,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt)
+{
+    /// <summary>
+    /// Written as an Expression (not a normal method) so EF Core can turn it into the SELECT
+    /// columns of the SQL query. Shared by the order list and the dashboard.
+    /// </summary>
+    public static readonly Expression<Func<Order, OrderSummaryResponse>> Projection = o => new OrderSummaryResponse(
+        o.Id,
+        o.OrderNumber,
+        o.CustomerId,
+        o.Customer!.Name,
+        o.Customer.Phone,
+        o.Status,
+        o.PaymentStatus,
+        o.Total,
+        o.Items.Count,
+        o.DueDate,
+        o.CreatedAt);
+}

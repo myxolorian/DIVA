@@ -217,18 +217,7 @@ public static class OrderEndpoints
             .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.OrderNumber)
             .Skip((pageNumber - 1) * size)
             .Take(size)
-            .Select(o => new OrderSummaryResponse(
-                o.Id,
-                o.OrderNumber,
-                o.CustomerId,
-                o.Customer!.Name,
-                o.Customer.Phone,
-                o.Status,
-                o.PaymentStatus,
-                o.Total,
-                o.Items.Count,
-                o.DueDate,
-                o.CreatedAt))
+            .Select(OrderSummaryResponse.Projection)
             .ToListAsync(ct);
 
         return Results.Ok(new PagedResult<OrderSummaryResponse>(items, total, pageNumber, size));
