@@ -14,7 +14,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 0: fondasi (solution, paket, Dockerfile, CI)
 - [x] Tahap 1: data layer (entity, migration, sequence nomor order, RLS, seed)
 - [x] Tahap 2: auth (JWT Supabase)
-- [ ] Tahap 3: API customer dan jasa
+- [x] Tahap 3: API customer dan jasa
 - [ ] Tahap 4: API order
 - [ ] Tahap 5: receipt (JSON, PDF, link publik)
 - [ ] Tahap 6: API dashboard
@@ -29,6 +29,7 @@ BE/
   src/Diva.Api/        # API: Domain/, Data/ (DbContext, Configurations, Migrations), Auth/, Features/
   tests/Diva.Tests/    # xUnit
 FE/                    # halaman Bootstrap (menyusul di tahap 7)
+docs/postman/          # collection Postman siap-import
 Dockerfile             # build BE, salin FE ke wwwroot
 ```
 
@@ -130,6 +131,31 @@ Hasil yang benar: `200` dengan `{"id":"...","email":"..."}`. Kalau `401`, lihat 
 
 Jangan menempelkan token atau password di chat, issue, atau commit.
 
+## Endpoint
+
+Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error memakai format standar ProblemDetails; error validasi (400) berisi pesan per kolom di `errors`.
+
+| Method | URL | Keterangan |
+|---|---|---|
+| GET | `/health` | Tanpa login. Cek server hidup |
+| GET | `/api/me` | User yang sedang login |
+| GET | `/api/services?includeInactive=false` | Daftar jasa, urut nama |
+| GET | `/api/services/{id}` | Detail jasa |
+| POST | `/api/services` | Tambah jasa: `{ "name", "unit": "Kg"\|"Pcs"\|"M2", "price" }` |
+| PUT | `/api/services/{id}` | Ubah jasa (boleh sertakan `isActive`) |
+| DELETE | `/api/services/{id}` | Nonaktifkan jasa (tidak dihapus, supaya order lama tetap utuh) |
+| GET | `/api/customers?search=&page=1&pageSize=20` | Daftar customer aktif; `search` mencocokkan sebagian nama atau no. telp |
+| GET | `/api/customers/{id}` | Detail customer |
+| POST | `/api/customers` | Tambah customer: `{ "name", "phone", "address", "notes" }` |
+| PUT | `/api/customers/{id}` | Ubah customer |
+| DELETE | `/api/customers/{id}` | Hapus customer (soft delete: `is_deleted = true`) |
+
+Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
+
+### Postman
+
+Import `docs/postman/DIVA.postman_collection.json` (Postman > **Import**). Collection ini memakai environment `DIVA Local` (`baseUrl`, `supabaseUrl`, `publishableKey`, `ownerEmail`, `ownerPassword`, `token`). Jalankan **Auth > Login Supabase** dulu; request lain otomatis memakai token itu. Request "Tambah jasa" dan "Tambah customer" menyimpan id hasilnya supaya request Detail/Ubah/Hapus langsung bisa dipakai.
+
 ## Menjalankan
 
 ```bash
@@ -143,6 +169,17 @@ dotnet run          # http://localhost:5189, cek GET /health
 cd BE
 dotnet test
 ```
+
+Tes yang butuh database (API customer dan jasa) memakai PostgreSQL sungguhan. Tanpa env var `DIVA_TEST_DB`, tes itu dilewati (*skipped*) dan sisanya tetap jalan. Di CI, GitHub Actions menyediakan PostgreSQL sehingga semua tes jalan.
+
+Untuk menjalankannya di laptop, arahkan `DIVA_TEST_DB` ke server PostgreSQL **lokal** (misalnya dari installer PostgreSQL atau Docker):
+
+```powershell
+$env:DIVA_TEST_DB = "Host=localhost;Database=postgres;Username=postgres;Password=<password lokal>"
+dotnet test
+```
+
+**Jangan arahkan `DIVA_TEST_DB` ke Supabase.** Tes membuat database sementara `diva_test_...`, menjalankan semua migration di sana, lalu menghapusnya.
 
 ## Docker
 

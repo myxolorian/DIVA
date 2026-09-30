@@ -37,7 +37,8 @@ public sealed class DivaApiFactory : WebApplicationFactory<Program>
 
         var values = new Dictionary<string, string?>
         {
-            // The database is never opened by these tests, but Program insists on a connection string.
+            // Auth tests never open the database, but Program insists on a connection string.
+            // Database tests override this through the settings dictionary.
             ["ConnectionStrings:Default"] = "Host=localhost;Database=unused;Username=unused;Password=unused",
             ["Supabase:Url"] = TestJwtIssuer.ProjectUrl,
         };

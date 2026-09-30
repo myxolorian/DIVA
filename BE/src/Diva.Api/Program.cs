@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
 using Diva.Api.Auth;
 using Diva.Api.Data;
 using Diva.Api.Features.Account;
+using Diva.Api.Features.Customers;
+using Diva.Api.Features.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +22,13 @@ builder.Services.AddDbContext<DivaDbContext>(options =>
 
 builder.Services.AddDivaAuthentication(builder.Configuration, builder.Environment);
 
+// Errors use the standard ProblemDetails JSON shape: { "title": ..., "status": ..., "errors": ... }.
+builder.Services.AddProblemDetails();
+
+// Enums travel as text ("Kg", not 0). Numbers are refused so a typo cannot pick a random unit.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+
 var app = builder.Build();
 
 if (app.Configuration.IsDevBypassEnabled())
@@ -28,12 +38,24 @@ if (app.Configuration.IsDevBypassEnabled())
         AuthServiceCollectionExtensions.DevBypassSetting);
 }
 
+if (!app.Environment.IsDevelopment())
+{
+    // Unexpected errors become a plain 500 ProblemDetails instead of leaking a stack trace.
+    // (In Development the detailed error page is shown instead.)
+    app.UseExceptionHandler();
+}
+
+// Empty error responses such as 401 or 404 get a ProblemDetails body too.
+app.UseStatusCodePages();
+
 // Order matters: authentication (who are you?) must run before authorization (are you allowed in?).
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAccountEndpoints();
+app.MapCustomerEndpoints();
+app.MapServiceEndpoints();
 
 app.Run();
 
