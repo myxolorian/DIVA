@@ -46,4 +46,35 @@ public class AppConfigEndpointTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.CacheControl?.NoCache);
     }
+
+    [Fact]
+    public async Task Home_page_is_the_frontend()
+    {
+        using var factory = new DivaApiFactory("Development", Settings);
+
+        var response = await factory.CreateClient().GetAsync("/");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Missing_frontend_says_so_instead_of_asking_for_a_login()
+    {
+        var emptyFolder = Directory.CreateTempSubdirectory("diva-no-fe-");
+        try
+        {
+            using var factory = new DivaApiFactory("Development",
+                new Dictionary<string, string?>(Settings) { ["Frontend:Path"] = emptyFolder.FullName });
+
+            var response = await factory.CreateClient().GetAsync("/");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Contains("Halaman DIVA belum ada di server", await response.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            emptyFolder.Delete(recursive: true);
+        }
+    }
 }

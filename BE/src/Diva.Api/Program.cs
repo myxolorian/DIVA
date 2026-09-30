@@ -100,6 +100,28 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
+// Without the pages, "/" would fall through to the login-required default and answer 401, which
+// hides the real problem. Only mapped when index.html is missing: an endpoint on "/" would
+// otherwise stop the static file middleware from serving the real home page.
+if (!File.Exists(Path.Combine(frontendPath, "index.html")))
+{
+    app.Logger.LogWarning("Frontend not found at {Path}: the web pages will not be shown.", frontendPath);
+
+    app.MapGet("/", (IWebHostEnvironment env) =>
+        {
+            var message = "Halaman DIVA belum ada di server. Pastikan kode terbaru sudah di-pull.";
+            if (env.IsDevelopment())
+            {
+                message += $" Folder yang dicari: {frontendPath}";
+            }
+
+            return Results.Text(message, statusCode: StatusCodes.Status404NotFound);
+        })
+        .AllowAnonymous()
+        .ExcludeFromDescription();
+}
+
 app.MapAccountEndpoints();
 app.MapAppConfigEndpoints();
 app.MapCustomerEndpoints();
