@@ -16,7 +16,7 @@ public class DashboardEndpointTests(ApiWithDatabaseFixture api) : IClassFixture<
 
     private static Order NewOrder(
         Guid customerId, string number, DateTimeOffset createdAt, decimal total,
-        OrderStatus status, PaymentStatus payment, DateOnly? due = null) => new()
+        OrderStatus status, PaymentStatus payment, DateOnly? due = null, DateTimeOffset? paidAt = null) => new()
     {
         OrderNumber = number,
         PublicToken = $"token{number}".PadRight(22, 'x'),
@@ -26,6 +26,7 @@ public class DashboardEndpointTests(ApiWithDatabaseFixture api) : IClassFixture<
         Status = status,
         PaymentStatus = payment,
         DueDate = due,
+        PaidAt = paidAt,
     };
 
     [PostgresFact]
@@ -45,17 +46,20 @@ public class DashboardEndpointTests(ApiWithDatabaseFixture api) : IClassFixture<
             db.Customers.Add(customer);
             db.Orders.AddRange(
                 // 15 Jan WIB, paid, due today and still open
-                NewOrder(customer.Id, "O1", Utc(15, 3), 50_000m, OrderStatus.Baru, PaymentStatus.Lunas, due: Day),
+                NewOrder(customer.Id, "O1", Utc(15, 3), 50_000m, OrderStatus.Baru, PaymentStatus.Lunas, due: Day, paidAt: Utc(15, 3)),
                 // 15 Jan 23:00 WIB, unpaid, due yesterday and still open -> overdue
                 NewOrder(customer.Id, "O2", Utc(15, 16), 30_000m, OrderStatus.Diproses, PaymentStatus.BelumLunas, due: Day.AddDays(-1)),
                 // 14 Jan 17:30 UTC = 15 Jan 00:30 WIB -> counts for the 15th; past due but already finished
                 NewOrder(customer.Id, "O3", Utc(14, 17, 30), 20_000m, OrderStatus.Selesai, PaymentStatus.BelumLunas, due: Day.AddDays(-2)),
                 // 15 Jan 17:30 UTC = 16 Jan WIB -> tomorrow, outside the window
-                NewOrder(customer.Id, "O4", Utc(15, 17, 30), 999m, OrderStatus.Diambil, PaymentStatus.Lunas),
-                // 10 Jan WIB -> inside the 7-day window (9-15 Jan)
-                NewOrder(customer.Id, "O5", Utc(10, 5), 40_000m, OrderStatus.Diambil, PaymentStatus.Lunas),
+                NewOrder(customer.Id, "O4", Utc(15, 17, 30), 999m, OrderStatus.Diambil, PaymentStatus.Lunas, paidAt: Utc(15, 17, 30)),
+                // 10 Jan WIB -> inside the 7-day window (9-15 Jan); paid today, so it is today's income
+                NewOrder(customer.Id, "O5", Utc(10, 5), 40_000m, OrderStatus.Diambil, PaymentStatus.Lunas, paidAt: Utc(15, 4)),
                 // 8 Jan WIB -> before the window; unpaid; due in the future
-                NewOrder(customer.Id, "O6", Utc(8, 5), 10_000m, OrderStatus.Baru, PaymentStatus.BelumLunas, due: Day.AddDays(5)));
+                NewOrder(customer.Id, "O6", Utc(8, 5), 10_000m, OrderStatus.Baru, PaymentStatus.BelumLunas, due: Day.AddDays(5)),
+                // Ordered last December, paid on 12 Jan -> part of this month's income
+                NewOrder(customer.Id, "O7", new DateTimeOffset(2019, 12, 20, 5, 0, 0, TimeSpan.Zero), 5_000m,
+                    OrderStatus.Diambil, PaymentStatus.Lunas, paidAt: Utc(12, 5)));
             await db.SaveChangesAsync();
         }
 
@@ -64,8 +68,11 @@ public class DashboardEndpointTests(ApiWithDatabaseFixture api) : IClassFixture<
 
         Assert.Equal(Day, summary!.Date);
         Assert.Equal(new DayTotals(Orders: 3, Total: 100_000m, PaidTotal: 50_000m, UnpaidTotal: 50_000m), summary.Today);
+        // Income is counted on the payment moment: O1 and O5 were paid today (O5 was ordered on the 10th);
+        // O7 (ordered in December) was paid on the 12th; O4 was paid at 00:30 WIB tomorrow.
+        Assert.Equal(new IncomeTotals(Today: 90_000m, TodayOrders: 2, ThisMonth: 95_000m, ThisMonthOrders: 3), summary.Income);
         Assert.Equal(new UnpaidTotals(Orders: 3, Total: 60_000m), summary.Unpaid); // O2 + O3 + O6
-        Assert.Equal(new StatusCounts(Baru: 2, Diproses: 1, Selesai: 1, Diambil: 2), summary.StatusCounts);
+        Assert.Equal(new StatusCounts(Baru: 2, Diproses: 1, Selesai: 1, Diambil: 3), summary.StatusCounts);
         Assert.Equal((1, 1), (summary.DueToday, summary.Overdue)); // O1 due today, O2 overdue
 
         Assert.Equal(

@@ -251,6 +251,71 @@ public class OrderEndpointTests(ApiWithDatabaseFixture api) : IClassFixture<ApiW
         });
 
         Assert.Equal(PaymentStatus.Lunas, order.PaymentStatus);
+        Assert.NotNull(order.PaidAt); // paid on the spot: the money came in now
+    }
+
+    [PostgresFact]
+    public async Task Paid_at_records_when_the_money_came_in()
+    {
+        var client = api.CreateClient();
+        var customer = await CreateCustomerAsync(client);
+        var order = await CreateSimpleOrderAsync(client, customer.Id);
+        Assert.Null(order.PaidAt);
+
+        async Task<OrderResponse> SetPaymentAsync(string paymentStatus)
+        {
+            var response = await client.PatchAsJsonAsync($"/api/orders/{order.Id}/payment", new { paymentStatus });
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return (await response.Content.ReadFromJsonAsync<OrderResponse>(TestJson.Options))!;
+        }
+
+        var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+        var paid = await SetPaymentAsync("Lunas");
+        Assert.InRange(paid.PaidAt!.Value, before, DateTimeOffset.UtcNow.AddSeconds(1));
+
+        // A second "Lunas" click must not move the income to a later moment.
+        await Task.Delay(20);
+        var paidAgain = await SetPaymentAsync("Lunas");
+        Assert.Equal(paid.PaidAt, paidAgain.PaidAt);
+
+        var unpaid = await SetPaymentAsync("BelumLunas");
+        Assert.Null(unpaid.PaidAt);
+    }
+
+    [PostgresFact]
+    public async Task Delete_removes_the_order_its_items_and_its_receipt_link()
+    {
+        var client = api.CreateClient();
+        var customer = await CreateCustomerAsync(client);
+        var order = await CreateSimpleOrderAsync(client, customer.Id);
+        var other = await CreateSimpleOrderAsync(client, customer.Id);
+
+        var response = await client.DeleteAsync($"/api/orders/{order.Id}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/orders/{order.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await api.CreateAnonymousClient().GetAsync($"/api/public/receipts/{order.PublicToken}")).StatusCode);
+        await using (var db = api.CreateDbContext())
+        {
+            Assert.Equal(0, db.OrderItems.Count(i => i.OrderId == order.Id));
+            Assert.Equal(1, db.OrderItems.Count(i => i.OrderId == other.Id)); // other orders are untouched
+        }
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/orders/{order.Id}")).StatusCode);
+    }
+
+    [PostgresFact]
+    public async Task Delete_requires_login()
+    {
+        var client = api.CreateClient();
+        var customer = await CreateCustomerAsync(client);
+        var order = await CreateSimpleOrderAsync(client, customer.Id);
+
+        var response = await api.CreateAnonymousClient().DeleteAsync($"/api/orders/{order.Id}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/orders/{order.Id}")).StatusCode);
     }
 
     [PostgresFact]
@@ -294,6 +359,7 @@ public class OrderEndpointTests(ApiWithDatabaseFixture api) : IClassFixture<ApiW
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/orders/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.PatchAsJsonAsync($"/api/orders/{id}/status", new { status = "Selesai" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.PatchAsJsonAsync($"/api/orders/{id}/payment", new { paymentStatus = "Lunas" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/orders/{id}")).StatusCode);
     }
 
     [PostgresFact]

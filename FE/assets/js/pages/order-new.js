@@ -4,7 +4,7 @@
 import { api, ApiError } from '../api.js';
 import { startPage } from '../layout.js';
 import { openCustomerForm } from '../customer-form.js';
-import { el, icon, $, debounce, emptyState, skeletonRows, pageError, toast } from '../ui.js';
+import { el, fill, icon, $, debounce, emptyState, skeletonRows, pageError, toast } from '../ui.js';
 import { rupiah, number, unitLabel, priceText, initials, todayWib, addDays, date, quantity } from '../format.js';
 
 const STEPS = ['Customer', 'Jasa', 'Konfirmasi'];
@@ -249,7 +249,7 @@ function renderReview() {
   const paymentOption = (value, label, iconName) => el('button', { type: 'button', class: `btn flex-fill ${state.payment === value ? 'btn-primary' : 'btn-light'}`, 'aria-pressed': String(state.payment === value),
     onclick: () => { state.payment = value; renderReview(); } }, icon(iconName, 'me-1'), label);
 
-  sections[2].replaceChildren(
+  fill(sections[2],
     el('div', { class: 'card-soft p-3 mb-3 d-flex align-items-center gap-3' },
       el('span', { class: 'avatar' }, initials(state.customer.name)),
       el('div', { class: 'flex-grow-1 min-w-0' }, el('div', { class: 'fw-bold text-truncate' }, state.customer.name), el('div', { class: 'small muted' }, state.customer.phone)),

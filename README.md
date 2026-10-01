@@ -168,7 +168,9 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | GET | `/api/orders?status=&paymentStatus=&customerId=&search=&from=&to=&page=&pageSize=` | Daftar order, terbaru dulu; `search` = nomor order / nama / telp; `from`/`to` = tanggal WIB (`yyyy-MM-dd`) |
 | GET | `/api/orders/{id}` | Detail order + item |
 | PATCH | `/api/orders/{id}/status` | `{ "status": "Baru"\|"Diproses"\|"Selesai"\|"Diambil" }` |
-| PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }` |
+| PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }`. Menjadi Lunas → waktu lunas (`paidAt`) dicatat |
+| DELETE | `/api/orders/{id}` | **Hapus permanen** order beserta isinya; link receipt-nya jadi 404. Nomor order tidak dipakai ulang |
+| GET | `/api/reports/income?from=&to=` | Laporan pemasukan (lihat di bawah); `from`/`to` = tanggal WIB, default tanggal 1 bulan ini s.d. hari ini, maksimal 366 hari |
 | GET | `/api/dashboard/summary?date=` | Ringkasan untuk halaman depan (lihat di bawah); `date` = tanggal WIB `yyyy-MM-dd`, default hari ini |
 | GET | `/api/outlet` | Profil laundry (nama, alamat, telp, footer receipt) |
 | PUT | `/api/outlet` | Ubah profil laundry |
@@ -194,12 +196,15 @@ Isi ringkasan dashboard:
 
 | Field | Arti |
 |---|---|
-| `today` | Order yang **masuk** pada tanggal itu (WIB): jumlah, nilai total, dan pecahannya menurut status bayar saat ini (`paidTotal` / `unpaidTotal`). Ini nilai order, bukan uang yang diterima hari itu (waktu pembayaran belum dicatat). |
+| `today` | Order yang **masuk** pada tanggal itu (WIB): jumlah, nilai total, dan pecahannya menurut status bayar saat ini (`paidTotal` / `unpaidTotal`). Ini nilai order, bukan uang yang diterima |
+| `income` | **Pemasukan** (uang yang diterima): order yang ditandai Lunas hari itu (`today`) dan sejak tanggal 1 bulan itu (`thisMonth`), menurut waktu lunasnya |
 | `unpaid` | Semua order yang masih `BelumLunas` (piutang), dari semua tanggal |
 | `statusCounts` | Jumlah order per status, dari semua tanggal |
 | `dueToday` / `overdue` | Order berstatus Baru/Diproses yang tanggal selesainya hari ini / sudah lewat |
 | `last7Days` | 7 hari sampai tanggal itu, termasuk hari tanpa order (nilai 0) |
 | `recentOrders` | 5 order terbaru, bentuknya sama dengan list order |
+
+**Pemasukan** dihitung pada saat order ditandai Lunas (`paid_at`), bukan saat order dibuat: order Senin yang dibayar Rabu adalah pemasukan Rabu. Menandai Lunas dua kali tidak menggeser tanggalnya; mengembalikan ke Belum lunas menghapusnya dari pemasukan. Order yang sudah Lunas sebelum kolom ini ada diberi `paid_at` = tanggal order (migration `OrderPaidAt`). Laporan `/api/reports/income` berisi `total`, `orders`, `days` (setiap hari dalam rentang, yang kosong bernilai 0) dan `items` (order yang lunas, waktu lunas terbaru dulu).
 
 Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
 
@@ -216,13 +221,14 @@ Cara membuka: jalankan API (lihat **Menjalankan**), lalu buka `http://localhost:
 | Halaman | Isi |
 |---|---|
 | `login.html` | Login email + password (langsung ke Supabase Auth, token disimpan di browser) |
-| `index.html` | Beranda: nilai order hari ini, belum lunas, siap diambil, status order, grafik 7 hari, order terbaru, peringatan order terlambat |
+| `index.html` | Beranda: pemasukan hari ini dan bulan ini, nilai order hari ini, belum lunas, status order, grafik 7 hari, order terbaru, peringatan order terlambat |
 | `order-new.html` | Buat order 3 langkah: pilih/tambah customer → pilih jasa + qty (dikelompokkan per kategori) → tanggal selesai, pembayaran, catatan |
-| `order.html?id=` | Detail order: ubah status, tandai lunas, kirim receipt lewat WhatsApp, salin link, unduh PDF |
+| `order.html?id=` | Detail order: ubah status, tandai lunas, kirim receipt lewat WhatsApp, salin link, unduh PDF, hapus order |
+| `laporan.html` | Laporan pemasukan: Hari ini, 7 hari, Bulan ini, Bulan lalu, atau tanggal pilihan sendiri; total, rata-rata per hari, hari terbaik, grafik per hari, daftar order lunas |
 | `orders.html` | Daftar order dengan filter status / pembayaran dan pencarian |
 | `customers.html` | Customer tersimpan: cari, tambah, ubah, hapus, buat order, WhatsApp/telepon |
 | `services.html` | Jasa & harga: ubah harga, tambah jasa, nonaktifkan |
-| `settings.html` | Profil laundry (tampil di receipt) dan logout |
+| `settings.html` | "Lainnya" di HP: menu Laporan, Jasa & Harga, Customer; profil laundry (tampil di receipt) dan logout |
 | `receipt.html` | Receipt publik untuk customer (`/r/{token}`) |
 
 Tampilan dibuat untuk HP dulu (navigasi bawah + tombol "+" di tengah), lalu melebar menjadi sidebar di layar ≥ 992px.

@@ -121,7 +121,7 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/dashboard/summary",
-            "description": "Angka untuk halaman depan: order & nilai order hari ini (WIB), piutang, jumlah per status, jatuh tempo hari ini, terlambat, 7 hari terakhir, 5 order terbaru."
+            "description": "Angka untuk halaman depan: pemasukan hari ini & bulan ini (order yang ditandai Lunas, menurut waktu lunas), order & nilai order hari ini (WIB), piutang, jumlah per status, jatuh tempo hari ini, terlambat, 7 hari terakhir, 5 order terbaru."
           }
         },
         {
@@ -131,6 +131,49 @@
             "header": [],
             "url": "{{baseUrl}}/api/dashboard/summary?date=2026-10-01",
             "description": "Ganti tanggal (yyyy-MM-dd, WIB)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Laporan",
+      "item": [
+        {
+          "name": "Pemasukan bulan ini",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/reports/income",
+            "description": "Tanpa parameter: tanggal 1 bulan ini sampai hari ini (WIB). Pemasukan = order yang ditandai Lunas, dihitung pada tanggal lunasnya. Berisi total, jumlah order, pemasukan per hari (hari kosong = 0), dan daftar order yang lunas."
+          }
+        },
+        {
+          "name": "Pemasukan rentang tanggal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/income?from=2026-10-01&to=2026-10-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "income"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-10-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-10-31"
+                }
+              ]
+            },
+            "description": "from dan to adalah tanggal WIB, keduanya ikut dihitung. Maksimal 366 hari; from setelah to → 400."
           }
         }
       ]
@@ -430,7 +473,16 @@
                 }
               }
             },
-            "description": "BelumLunas atau Lunas."
+            "description": "BelumLunas atau Lunas. Saat berubah menjadi Lunas, waktu lunas (paidAt) dicatat; pemasukan dihitung pada waktu ini. Lunas → Lunas tidak mengubah paidAt; BelumLunas mengosongkannya."
+          }
+        },
+        {
+          "name": "Hapus order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}",
+            "description": "Hapus permanen: order dan isinya hilang, link receipt jadi 404. Hasil 204 tanpa isi. Jalankan lagi → 404."
           }
         }
       ]

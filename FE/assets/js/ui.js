@@ -21,6 +21,15 @@ export function el(tag, attrs = {}, ...children) {
   return node;
 }
 
+/**
+ * Replaces the contents of `node`, skipping null/false children like el() does.
+ * (The DOM's own replaceChildren() would print them as the text "null".)
+ */
+export function fill(node, ...children) {
+  node.replaceChildren(...children.flat().filter((child) => child !== undefined && child !== null && child !== false));
+  return node;
+}
+
 export const icon = (name, extra = '') => el('i', { class: `bi ${name} ${extra}`.trim(), 'aria-hidden': 'true' });
 
 export const $ = (selector, root = document) => root.querySelector(selector);

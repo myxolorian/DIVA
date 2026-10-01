@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { startPage } from '../layout.js';
-import { el, icon, $, debounce, emptyState, skeletonRows, pageError, badge } from '../ui.js';
+import { el, icon, $, debounce, emptyState, skeletonRows, pageError, badge, toast } from '../ui.js';
 import { rupiah, dateTime, dueText, statuses, statusOrder, payments } from '../format.js';
 
 const params = new URLSearchParams(location.search);
@@ -120,6 +120,8 @@ search.addEventListener('input', debounce(() => {
 }, 300));
 
 await startPage('orders');
+// Coming back from a deleted order (order.html). syncUrl() drops the parameter from the address.
+if (params.get('deleted')) toast(`Order ${params.get('deleted')} dihapus.`);
 
 if (state.customerId) {
   api(`/api/customers/${state.customerId}`).then((customer) => {

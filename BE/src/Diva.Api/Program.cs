@@ -9,6 +9,7 @@ using Diva.Api.Features.Dashboard;
 using Diva.Api.Features.Orders;
 using Diva.Api.Features.Outlet;
 using Diva.Api.Features.Receipts;
+using Diva.Api.Features.Reports;
 using Diva.Api.Features.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -129,6 +130,7 @@ app.MapServiceEndpoints();
 app.MapOrderEndpoints();
 app.MapDashboardEndpoints();
 app.MapOutletEndpoints();
+app.MapReportEndpoints();
 app.MapReceiptEndpoints(frontendPath);
 
 app.Run();

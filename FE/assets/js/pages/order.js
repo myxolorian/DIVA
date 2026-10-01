@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { startPage } from '../layout.js';
-import { el, icon, $, badge, toast, pageError, confirmDialog } from '../ui.js';
+import { el, fill, icon, $, badge, toast, pageError, confirmDialog } from '../ui.js';
 import { rupiah, dateTime, date, dueText, quantity, statuses, statusOrder, payments, waLink, initials } from '../format.js';
 
 const params = new URLSearchParams(location.search);
@@ -74,7 +74,8 @@ function paymentCard() {
   return el('div', { class: 'card-soft p-3 mb-3 d-flex align-items-center gap-3' },
     el('div', { class: 'grow flex-grow-1' },
       el('div', { class: 'small muted fw-semibold' }, 'Pembayaran'),
-      el('div', { class: 'd-flex align-items-center gap-2' }, el('span', { class: 'fs-4 fw-bold num' }, rupiah(order.total)), badge(payments[order.paymentStatus]))),
+      el('div', { class: 'd-flex align-items-center gap-2' }, el('span', { class: 'fs-4 fw-bold num' }, rupiah(order.total)), badge(payments[order.paymentStatus])),
+      paid && order.paidAt ? el('div', { class: 'small muted' }, `Lunas pada ${dateTime(order.paidAt)}`) : null),
     paid
       ? el('button', { type: 'button', class: 'btn btn-light', onclick: async () => {
           if (await confirmDialog('Status pembayaran akan dikembalikan menjadi belum lunas.', { title: 'Batalkan lunas?', okText: 'Ya, belum lunas' })) {
@@ -120,7 +121,7 @@ function infoCard() {
 function render() {
   $('#title').textContent = order.orderNumber;
   document.title = `${order.orderNumber} · DIVA Laundry`;
-  content.replaceChildren(
+  fill(content,
     justCreated
       ? el('div', { class: 'card-soft p-3 mb-3 border-success' },
           el('div', { class: 'd-flex align-items-center gap-2 mb-3' }, icon('bi-check-circle-fill', 'text-success fs-3'),
@@ -135,7 +136,25 @@ function render() {
     itemsCard(),
     infoCard(),
     justCreated ? null : el('h2', { class: 'section-title' }, 'Receipt'),
-    justCreated ? null : el('div', { class: 'card-soft p-3' }, shareButtons(false)));
+    justCreated ? null : el('div', { class: 'card-soft p-3' }, shareButtons(false)),
+    el('div', { class: 'text-center mt-4' },
+      el('button', { type: 'button', class: 'btn btn-link text-danger text-decoration-none', onclick: (event) => deleteOrder(event.currentTarget) },
+        icon('bi-trash', 'me-1'), 'Hapus order')));
+}
+
+async function deleteOrder(button) {
+  const ok = await confirmDialog(
+    `Order ${order.orderNumber} akan dihapus permanen, termasuk dari laporan pemasukan. Link receipt yang sudah dibagikan tidak bisa dibuka lagi.`,
+    { title: 'Hapus order ini?', okText: 'Ya, hapus', danger: true });
+  if (!ok) return;
+  button.disabled = true;
+  try {
+    await api(`/api/orders/${id}`, { method: 'DELETE' });
+    location.replace(`/orders.html?deleted=${encodeURIComponent(order.orderNumber)}`);
+  } catch (error) {
+    button.disabled = false;
+    toast(error.message, 'danger');
+  }
 }
 
 async function load() {

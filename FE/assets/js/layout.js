@@ -8,6 +8,7 @@ const items = [
   { key: 'dashboard', href: '/', icon: 'bi-house', label: 'Beranda' },
   { key: 'orders', href: '/orders.html', icon: 'bi-receipt', label: 'Order' },
   { key: 'customers', href: '/customers.html', icon: 'bi-people', label: 'Customer' },
+  { key: 'report', href: '/laporan.html', icon: 'bi-graph-up', label: 'Laporan' },
   { key: 'services', href: '/services.html', icon: 'bi-tags', label: 'Jasa & Harga' },
   { key: 'settings', href: '/settings.html', icon: 'bi-gear', label: 'Pengaturan' },
 ];
@@ -21,7 +22,7 @@ function sidebar(active) {
 
 function bottomNav(active) {
   const link = (item) => el('a', { href: item.href, class: item.key === active ? 'active' : '', 'aria-current': item.key === active ? 'page' : null }, icon(item.icon), item.label);
-  const more = active === 'services' || active === 'settings';
+  const more = active === 'services' || active === 'settings' || active === 'report';
   return el('nav', { class: 'bottom-nav', 'aria-label': 'Menu utama' },
     link(items[0]),
     link(items[1]),

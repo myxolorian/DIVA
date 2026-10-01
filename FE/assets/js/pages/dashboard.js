@@ -40,12 +40,16 @@ function render(s) {
   content.replaceChildren(
     ...alerts,
     el('div', { class: 'row g-3' },
-      el('div', { class: 'col-12 col-md-6' }, stat('Nilai order hari ini', rupiah(s.today.total),
-        `${number(s.today.orders)} order · ${rupiah(s.today.paidTotal)} sudah lunas`, 'stat-hero')),
+      // Money that came in today (orders marked paid today); the card opens the income report.
+      el('div', { class: 'col-12 col-md-6' }, el('a', { class: 'status-tile', href: '/laporan.html' },
+        stat('Pemasukan hari ini', rupiah(s.income.today),
+          el('span', { class: 'd-flex justify-content-between gap-2' },
+            el('span', {}, `Bulan ini ${rupiah(s.income.thisMonth)}`),
+            el('span', { class: 'text-nowrap' }, 'Laporan', icon('bi-chevron-right', 'ms-1'))), 'stat-hero'))),
+      el('div', { class: 'col-6 col-md-3' }, el('a', { class: 'status-tile', href: '/orders.html' },
+        stat('Order masuk hari ini', rupiah(s.today.total), `${number(s.today.orders)} order`))),
       el('div', { class: 'col-6 col-md-3' }, el('a', { class: 'status-tile', href: '/orders.html?payment=BelumLunas' },
-        stat('Belum lunas', rupiah(s.unpaid.total), `${number(s.unpaid.orders)} order`))),
-      el('div', { class: 'col-6 col-md-3' }, el('a', { class: 'status-tile', href: '/orders.html?status=Selesai' },
-        stat('Siap diambil', number(s.statusCounts.selesai), 'order sudah selesai')))),
+        stat('Belum lunas', rupiah(s.unpaid.total), `${number(s.unpaid.orders)} order`)))),
 
     el('h2', { class: 'section-title' }, 'Status order'),
     el('div', { class: 'row g-2' }, statusOrder.map((key) => el('div', { class: 'col-6 col-md-3' },

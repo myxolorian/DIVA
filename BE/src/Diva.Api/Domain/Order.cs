@@ -12,6 +12,8 @@ public class Order
 
     public OrderStatus Status { get; set; } = OrderStatus.Baru;
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.BelumLunas;
+    /// <summary>When the order was marked paid (null while unpaid). Income is counted on this moment.</summary>
+    public DateTimeOffset? PaidAt { get; set; }
     public decimal Total { get; set; }
     public string? Notes { get; set; }
     /// <summary>Promised pick-up date (a calendar date in WIB, no time).</summary>

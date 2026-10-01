@@ -19,6 +19,7 @@ public static class OrderEndpoints
         group.MapPost("/", Create);
         group.MapPatch("/{id:guid}/status", UpdateStatus);
         group.MapPatch("/{id:guid}/payment", UpdatePayment);
+        group.MapDelete("/{id:guid}", Delete);
 
         return app;
     }
@@ -129,13 +130,15 @@ public static class OrderEndpoints
             .SqlQuery<long>($"SELECT nextval({DivaDbContext.OrderNumberSequence}::regclass) AS \"Value\"")
             .SingleAsync(ct);
 
+        var paymentStatus = request.PaymentStatus ?? PaymentStatus.BelumLunas;
         var order = new Order
         {
             OrderNumber = OrderNumber.Format(now, sequence),
             PublicToken = PublicToken.Create(),
             CustomerId = customer!.Id,
             Customer = customer,
-            PaymentStatus = request.PaymentStatus ?? PaymentStatus.BelumLunas,
+            PaymentStatus = paymentStatus,
+            PaidAt = paymentStatus == PaymentStatus.Lunas ? now : null,
             Notes = notes,
             DueDate = request.DueDate,
             CreatedAt = now,
@@ -247,7 +250,7 @@ public static class OrderEndpoints
     }
 
     private static async Task<IResult> UpdatePayment(
-        Guid id, UpdatePaymentRequest request, DivaDbContext db, CancellationToken ct)
+        Guid id, UpdatePaymentRequest request, DivaDbContext db, TimeProvider clock, CancellationToken ct)
     {
         if (request.PaymentStatus is not { } paymentStatus || !Enum.IsDefined(paymentStatus))
         {
@@ -262,9 +265,38 @@ public static class OrderEndpoints
             return ApiResults.NotFound(NotFoundName);
         }
 
+        // PaidAt is when the money came in. Marking an already paid order as paid again keeps the
+        // original moment, so a second click does not move the income to another day.
+        if (paymentStatus == PaymentStatus.Lunas && order.PaymentStatus != PaymentStatus.Lunas)
+        {
+            order.PaidAt = clock.GetUtcNow();
+        }
+        else if (paymentStatus != PaymentStatus.Lunas)
+        {
+            order.PaidAt = null;
+        }
+
         order.PaymentStatus = paymentStatus;
         await db.SaveChangesAsync(ct);
 
         return await Get(id, db, ct);
+    }
+
+    /// <summary>
+    /// Deletes the order for good. Its items go with it (ON DELETE CASCADE) and its receipt link
+    /// stops working. The order number is not reused: the sequence only goes up.
+    /// </summary>
+    private static async Task<IResult> Delete(Guid id, DivaDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (order is null)
+        {
+            return ApiResults.NotFound(NotFoundName);
+        }
+
+        db.Orders.Remove(order);
+        await db.SaveChangesAsync(ct);
+
+        return Results.NoContent();
     }
 }
