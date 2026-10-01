@@ -277,11 +277,15 @@ a.status-tile:hover .stat { border-color: rgba(var(--diva-primary-rgb), 0.45); }
 @keyframes skeleton { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
 
 .toast-container { z-index: 1090; }
-.offcanvas-bottom { height: auto; max-height: 92vh; border-radius: 1.25rem 1.25rem 0 0; }
-.offcanvas-bottom .offcanvas-body { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
+/* Pop-up dari bawah. Selector sengaja ".offcanvas.offcanvas-bottom" (sama kuat dengan milik
+   Bootstrap): dengan ".offcanvas-bottom" saja, tinggi 30vh dan left: 0 dari Bootstrap menang,
+   sehingga di desktop panel bergeser keluar layar ke kiri. */
+.offcanvas.offcanvas-bottom { height: auto; max-height: 92vh; border-radius: 1.25rem 1.25rem 0 0; }
+.offcanvas.offcanvas-bottom .offcanvas-body { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
 @media (min-width: 992px) {
-  .offcanvas-bottom { left: 50%; right: auto; width: 34rem; transform: translate(-50%, 100%); }
-  .offcanvas-bottom.show:not(.hiding), .offcanvas-bottom.showing { transform: translate(-50%, 0); }
+  /* Di layar lebar: panel selebar 34rem, di tengah layar. */
+  .offcanvas.offcanvas-bottom { left: 50%; right: auto; width: min(34rem, calc(100vw - 2rem)); transform: translate(-50%, 100%); }
+  .offcanvas.offcanvas-bottom.show:not(.hiding), .offcanvas.offcanvas-bottom.showing { transform: translate(-50%, 0); }
 }
 .form-label { font-weight: 600; font-size: 0.875rem; }
 .muted { color: var(--diva-muted); }
