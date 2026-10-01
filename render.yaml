@@ -1,0 +1,23 @@
+# Render Blueprint: Render reads this file when you choose New > Blueprint and pick this repo.
+# One free web service built from the Dockerfile; every push to main deploys it again.
+# Secrets are NOT stored here: ConnectionStrings__Default is typed in the Render dashboard.
+services:
+  - type: web
+    name: diva
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Render's proxy sends the visitor's real IP and https in X-Forwarded-* headers.
+      - key: Proxy__TrustForwardedHeaders
+        value: "true"
+      # Supabase Session Pooler connection string; Render asks for it when the Blueprint is created.
+      - key: ConnectionStrings__Default
+        sync: false

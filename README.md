@@ -19,7 +19,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 5: receipt (JSON, PDF, link publik)
 - [x] Tahap 6: API dashboard
 - [x] Tahap 7: frontend
-- [ ] Tahap 8-9: hardening dan deploy
+- [x] Tahap 8-9: hardening dan deploy (Render)
 
 ## Struktur
 
@@ -31,6 +31,7 @@ BE/
 FE/                    # halaman Bootstrap + JavaScript (assets/js/pages/ = satu script per halaman)
 docs/postman/          # collection Postman siap-import
 Dockerfile             # build BE, salin FE ke wwwroot
+render.yaml            # Blueprint deploy ke Render (1 web service gratis)
 ```
 
 ## Prasyarat
@@ -56,7 +57,8 @@ Di production, isi lewat environment variable `ConnectionStrings__Default`.
 |---|---|---|
 | `ConnectionStrings:Default` | Connection string Session Pooler | **Ya** (user-secrets / env var) |
 | `Supabase:Url` | Alamat project, sudah diisi di `appsettings.json` | Tidak |
-| `Auth:DevBypass` | `true` = login palsu untuk development (lihat bagian Auth) | Tidak, tapi jangan aktif di production |
+| `Auth:DevBypass` | `true` = login palsu untuk development (lihat bagian Auth). Di luar Development aplikasi menolak start | Tidak, tapi jangan aktif di production |
+| `Proxy:TrustForwardedHeaders` | `true` hanya kalau aplikasi berjalan di belakang proxy hosting (Render): IP pengunjung dan https dibaca dari header `X-Forwarded-*` | Tidak |
 
 **Supabase:** ambil connection string dari *Project Settings > Database > Connection string* dan pilih **Session pooler** (kompatibel IPv4). Jangan pakai Transaction pooler (port 6543), karena tidak cocok dengan prepared statements Npgsql.
 
@@ -264,9 +266,33 @@ dotnet test
 
 **Jangan arahkan `DIVA_TEST_DB` ke Supabase.** Tes membuat database sementara `diva_test_...`, menjalankan semua migration di sana, lalu menghapusnya.
 
+## Keamanan di production
+
+- Semua respons membawa header keamanan: `Content-Security-Policy` (hanya script dari DIVA sendiri; koneksi keluar hanya ke Supabase Auth), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`.
+- Di luar Development: HSTS (browser selalu memakai https), error 500 tanpa detail teknis, dan `Auth:DevBypass` ditolak.
+- Di belakang proxy (`Proxy:TrustForwardedHeaders=true`), batas 60 request/menit untuk receipt publik dihitung per IP pengunjung asli, bukan per IP proxy.
+- Ukuran body request maksimal 1 MB.
+
 ## Docker
 
 ```bash
 docker build -t diva .
 docker run -p 8080:8080 -e ConnectionStrings__Default="..." diva
 ```
+
+Image berisi API + halaman FE (`wwwroot`), mendengarkan http di port 8080. HTTPS disediakan oleh hosting di depannya.
+
+## Deploy ke Render (gratis)
+
+`render.yaml` di root repo adalah *Blueprint*: Render membaca file ini dan membuat 1 web service gratis dari `Dockerfile`, region Singapore, health check `/health`, dan deploy otomatis setiap ada perubahan di branch `main`.
+
+1. Daftar/login di [render.com](https://render.com) dengan akun GitHub.
+2. **New > Blueprint**, pilih repo **DIVA** (beri Render akses ke repo itu kalau diminta), lalu **Connect**.
+3. Render meminta nilai `ConnectionStrings__Default`: paste connection string **Session pooler** Supabase yang sama dengan di user-secrets laptop (dengan `Trust Server Certificate=true`). Nilai ini hanya tersimpan di Render, tidak di GitHub.
+4. Klik **Apply / Deploy Blueprint**. Build pertama ±5-10 menit; tunggu status **Live**.
+5. Buka alamatnya (`https://diva-xxxx.onrender.com`), login dengan akun owner Supabase.
+
+Catatan paket gratis:
+- Aplikasi **tidur setelah 15 menit tanpa pengunjung**; pembukaan berikutnya menunggu ±1 menit. Supaya tetap bangun, buat monitor gratis di [UptimeRobot](https://uptimerobot.com) atau [cron-job.org](https://cron-job.org) yang membuka `https://diva-xxxx.onrender.com/health` setiap 10 menit (1 service menyala 24 jam ≈ 744 jam, masih di bawah kuota 750 jam/bulan).
+- Supabase paket gratis mem-*pause* project yang 7 hari tidak dipakai; dibuka lagi dari dashboard Supabase.
+- Migration baru tidak dijalankan otomatis: SQL-nya tetap dijalankan di Supabase SQL Editor sebelum/bersamaan dengan deploy.
