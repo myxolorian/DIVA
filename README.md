@@ -18,7 +18,7 @@ Aplikasi manajemen laundry: dashboard, customer tersimpan, order (jasa + qty), d
 - [x] Tahap 4: API order
 - [x] Tahap 5: receipt (JSON, PDF, link publik)
 - [x] Tahap 6: API dashboard
-- [ ] Tahap 7: frontend
+- [x] Tahap 7: frontend
 - [ ] Tahap 8-9: hardening dan deploy
 
 ## Struktur
@@ -28,7 +28,7 @@ BE/
   Diva.slnx
   src/Diva.Api/        # API: Domain/, Data/ (DbContext, Configurations, Migrations), Auth/, Features/
   tests/Diva.Tests/    # xUnit
-FE/                    # halaman Bootstrap (receipt.html sudah ada; halaman lain di tahap 7)
+FE/                    # halaman Bootstrap + JavaScript (assets/js/pages/ = satu script per halaman)
 docs/postman/          # collection Postman siap-import
 Dockerfile             # build BE, salin FE ke wwwroot
 ```
@@ -152,6 +152,7 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | Method | URL | Keterangan |
 |---|---|---|
 | GET | `/health` | Tanpa login. Cek server hidup |
+| GET | `/api/public/config` | Tanpa login. Alamat Supabase + publishable key untuk halaman login (tidak ada yang rahasia) |
 | GET | `/api/me` | User yang sedang login |
 | GET | `/api/services?includeInactive=false` | Daftar jasa, urut seperti price list (`sortOrder`) |
 | GET | `/api/services/{id}` | Detail jasa |
@@ -167,7 +168,9 @@ Semua endpoint di bawah wajib login (`Authorization: Bearer <token>`). Error mem
 | GET | `/api/orders?status=&paymentStatus=&customerId=&search=&from=&to=&page=&pageSize=` | Daftar order, terbaru dulu; `search` = nomor order / nama / telp; `from`/`to` = tanggal WIB (`yyyy-MM-dd`) |
 | GET | `/api/orders/{id}` | Detail order + item |
 | PATCH | `/api/orders/{id}/status` | `{ "status": "Baru"\|"Diproses"\|"Selesai"\|"Diambil" }` |
-| PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }` |
+| PATCH | `/api/orders/{id}/payment` | `{ "paymentStatus": "BelumLunas"\|"Lunas" }`. Menjadi Lunas → waktu lunas (`paidAt`) dicatat |
+| DELETE | `/api/orders/{id}` | **Hapus permanen** order beserta isinya; link receipt-nya jadi 404. Nomor order tidak dipakai ulang |
+| GET | `/api/reports/income?from=&to=` | Laporan pemasukan (lihat di bawah); `from`/`to` = tanggal WIB, default tanggal 1 bulan ini s.d. hari ini, maksimal 366 hari |
 | GET | `/api/dashboard/summary?date=` | Ringkasan untuk halaman depan (lihat di bawah); `date` = tanggal WIB `yyyy-MM-dd`, default hari ini |
 | GET | `/api/outlet` | Profil laundry (nama, alamat, telp, footer receipt) |
 | PUT | `/api/outlet` | Ubah profil laundry |
@@ -193,12 +196,15 @@ Isi ringkasan dashboard:
 
 | Field | Arti |
 |---|---|
-| `today` | Order yang **masuk** pada tanggal itu (WIB): jumlah, nilai total, dan pecahannya menurut status bayar saat ini (`paidTotal` / `unpaidTotal`). Ini nilai order, bukan uang yang diterima hari itu (waktu pembayaran belum dicatat). |
+| `today` | Order yang **masuk** pada tanggal itu (WIB): jumlah, nilai total, dan pecahannya menurut status bayar saat ini (`paidTotal` / `unpaidTotal`). Ini nilai order, bukan uang yang diterima |
+| `income` | **Pemasukan** (uang yang diterima): order yang ditandai Lunas hari itu (`today`) dan sejak tanggal 1 bulan itu (`thisMonth`), menurut waktu lunasnya |
 | `unpaid` | Semua order yang masih `BelumLunas` (piutang), dari semua tanggal |
 | `statusCounts` | Jumlah order per status, dari semua tanggal |
 | `dueToday` / `overdue` | Order berstatus Baru/Diproses yang tanggal selesainya hari ini / sudah lewat |
 | `last7Days` | 7 hari sampai tanggal itu, termasuk hari tanpa order (nilai 0) |
 | `recentOrders` | 5 order terbaru, bentuknya sama dengan list order |
+
+**Pemasukan** dihitung pada saat order ditandai Lunas (`paid_at`), bukan saat order dibuat: order Senin yang dibayar Rabu adalah pemasukan Rabu. Menandai Lunas dua kali tidak menggeser tanggalnya; mengembalikan ke Belum lunas menghapusnya dari pemasukan. Order yang sudah Lunas sebelum kolom ini ada diberi `paid_at` = tanggal order (migration `OrderPaidAt`). Laporan `/api/reports/income` berisi `total`, `orders`, `days` (setiap hari dalam rentang, yang kosong bernilai 0) dan `items` (order yang lunas, waktu lunas terbaru dulu).
 
 Aturan customer: nama dan no. telp wajib. No. telp disimpan tanpa pemisah (`0812-3456 7890` jadi `081234567890`), harus 8-15 digit dan boleh diawali `+`. Satu no. telp hanya boleh dipakai satu customer aktif; kalau sudah dipakai, jawabannya `409` dengan `customerId` milik customer tersebut.
 
@@ -210,7 +216,26 @@ Import `docs/postman/DIVA.postman_collection.json` (Postman > **Import**). Colle
 
 File di `FE/` disajikan oleh API yang sama (satu alamat untuk API dan halaman web). Saat development, API membaca langsung dari folder `FE/` repo (`Frontend:Path` di `appsettings.Development.json`); di Docker, isinya disalin ke `wwwroot`. File statis ini publik, sedangkan datanya tetap dilindungi login di API.
 
-Bootstrap dimuat dari CDN jsDelivr dengan atribut `integrity` (SRI), sehingga browser menolak file yang isinya berubah.
+Cara membuka: jalankan API (lihat **Menjalankan**), lalu buka `http://localhost:5189` di browser dan login dengan akun owner Supabase.
+
+| Halaman | Isi |
+|---|---|
+| `login.html` | Login email + password (langsung ke Supabase Auth, token disimpan di browser) |
+| `index.html` | Beranda: pemasukan hari ini dan bulan ini, nilai order hari ini, belum lunas, status order, grafik 7 hari, order terbaru, peringatan order terlambat |
+| `order-new.html` | Buat order 3 langkah: pilih/tambah customer → pilih jasa + qty (dikelompokkan per kategori) → tanggal selesai, pembayaran, catatan |
+| `order.html?id=` | Detail order: ubah status, tandai lunas, kirim receipt lewat WhatsApp, salin link, unduh PDF, hapus order |
+| `laporan.html` | Laporan pemasukan: Hari ini, 7 hari, Bulan ini, Bulan lalu, atau tanggal pilihan sendiri; total, rata-rata per hari, hari terbaik, grafik per hari, daftar order lunas |
+| `orders.html` | Daftar order dengan filter status / pembayaran dan pencarian |
+| `customers.html` | Customer tersimpan: cari, tambah, ubah, hapus, buat order, WhatsApp/telepon |
+| `services.html` | Jasa & harga: ubah harga, tambah jasa, nonaktifkan |
+| `settings.html` | "Lainnya" di HP: menu Laporan, Jasa & Harga, Customer; profil laundry (tampil di receipt) dan logout |
+| `receipt.html` | Receipt publik untuk customer (`/r/{token}`) |
+
+Tampilan dibuat untuk HP dulu (navigasi bawah + tombol "+" di tengah), lalu melebar menjadi sidebar di layar ≥ 992px.
+
+Bootstrap 5.3.8, Bootstrap Icons 1.13.1, dan huruf Plus Jakarta Sans disimpan di `FE/assets/vendor/` (bukan CDN), jadi aplikasi tidak bergantung pada server pihak ketiga. Semua teks dari database ditulis lewat `textContent` (bukan `innerHTML`), sehingga isian seperti nama customer tidak bisa menyisipkan script. Halaman dikirim dengan `Cache-Control: no-cache`: browser selalu mengecek versi terbaru setelah ada update.
+
+Setelah login, `assets/js/api.js` otomatis menambahkan token ke setiap request, memperbarui token yang hampir kedaluwarsa, dan kembali ke halaman login kalau API membalas 401.
 
 PDF dibuat dengan QuestPDF (lisensi Community: gratis untuk usaha dengan omzet di bawah USD 1 juta/tahun).
 

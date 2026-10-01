@@ -22,6 +22,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         b.HasIndex(x => x.CustomerId);
         b.HasIndex(x => x.CreatedAt);
         b.HasIndex(x => x.Status);
+        b.HasIndex(x => x.PaidAt);
 
         // Customers are soft-deleted, so a customer with orders can never be hard-deleted.
         b.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);

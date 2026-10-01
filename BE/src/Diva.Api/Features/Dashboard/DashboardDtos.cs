@@ -7,6 +7,9 @@ public sealed record DayTotals(int Orders, decimal Total, decimal PaidTotal, dec
 
 public sealed record UnpaidTotals(int Orders, decimal Total);
 
+/// <summary>Money that came in (orders marked paid) today and this month so far.</summary>
+public sealed record IncomeTotals(decimal Today, int TodayOrders, decimal ThisMonth, int ThisMonthOrders);
+
 public sealed record StatusCounts(int Baru, int Diproses, int Selesai, int Diambil);
 
 public sealed record DailyPoint(DateOnly Date, int Orders, decimal Total);
@@ -14,6 +17,7 @@ public sealed record DailyPoint(DateOnly Date, int Orders, decimal Total);
 public sealed record DashboardSummary(
     DateOnly Date,
     DayTotals Today,
+    IncomeTotals Income,
     UnpaidTotals Unpaid,
     StatusCounts StatusCounts,
     int DueToday,

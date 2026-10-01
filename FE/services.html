@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Jasa & Harga · DIVA Laundry</title>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/diva.css">
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <script type="module" src="/assets/js/pages/services.js"></script>
+</head>
+<body>
+  <main class="app-main">
+    <header class="page-header">
+      <a class="back d-lg-none" href="/settings.html" aria-label="Kembali"><i class="bi bi-arrow-left"></i></a>
+      <h1 class="flex-grow-1">Jasa &amp; Harga</h1>
+      <button class="btn btn-primary d-inline-flex align-items-center gap-1" id="add" type="button"><i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline"> Jasa baru</span></button>
+    </header>
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" role="switch" id="show-inactive">
+      <label class="form-check-label small" for="show-inactive">Tampilkan jasa nonaktif</label>
+    </div>
+    <div id="list" aria-live="polite"></div>
+  </main>
+</body>
+</html>

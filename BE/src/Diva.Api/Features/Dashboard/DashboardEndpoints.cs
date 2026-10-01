@@ -54,11 +54,21 @@ public static class DashboardEndpoints
             .Select(d => new DailyPoint(d, byDay[d].Count(), byDay[d].Sum(o => o.Total)))
             .ToList();
 
-        // 2. Money still to be collected, over all time: SQL COUNT and SUM.
+        // 2. Money that came in: counted on the moment an order was marked paid (PaidAt).
+        var monthStart = new DateOnly(day.Year, day.Month, 1);
+        var monthStartUtc = Wib.StartOfDayUtc(monthStart);
+        var paid = await orders
+            .Where(o => o.PaymentStatus == PaymentStatus.Lunas && o.PaidAt >= monthStartUtc && o.PaidAt < windowEnd)
+            .Select(o => new { PaidAt = o.PaidAt!.Value, o.Total })
+            .ToListAsync(ct);
+        var paidToday = paid.Where(o => DateOnly.FromDateTime(Wib.ToWib(o.PaidAt).DateTime) == day).ToList();
+        var income = new IncomeTotals(paidToday.Sum(o => o.Total), paidToday.Count, paid.Sum(o => o.Total), paid.Count);
+
+        // 3. Money still to be collected, over all time: SQL COUNT and SUM.
         var unpaidQuery = orders.Where(o => o.PaymentStatus == PaymentStatus.BelumLunas);
         var unpaid = new UnpaidTotals(await unpaidQuery.CountAsync(ct), await unpaidQuery.SumAsync(o => o.Total, ct));
 
-        // 3. How many orders are in each status: one GROUP BY query.
+        // 4. How many orders are in each status: one GROUP BY query.
         var perStatus = await orders
             .GroupBy(o => o.Status)
             .Select(g => new { Status = g.Key, Count = g.Count() })
@@ -67,18 +77,18 @@ public static class DashboardEndpoints
         var statusCounts = new StatusCounts(
             Count(OrderStatus.Baru), Count(OrderStatus.Diproses), Count(OrderStatus.Selesai), Count(OrderStatus.Diambil));
 
-        // 4. Work that needs attention.
+        // 5. Work that needs attention.
         var open = orders.Where(o => OpenStatuses.Contains(o.Status) && o.DueDate != null);
         var dueToday = await open.CountAsync(o => o.DueDate == day, ct);
         var overdue = await open.CountAsync(o => o.DueDate < day, ct);
 
-        // 5. The newest orders, in the same shape as the order list.
+        // 6. The newest orders, in the same shape as the order list.
         var recentOrders = await orders
             .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.OrderNumber)
             .Take(RecentCount)
             .Select(OrderSummaryResponse.Projection)
             .ToListAsync(ct);
 
-        return Results.Ok(new DashboardSummary(day, today, unpaid, statusCounts, dueToday, overdue, last7Days, recentOrders));
+        return Results.Ok(new DashboardSummary(day, today, income, unpaid, statusCounts, dueToday, overdue, last7Days, recentOrders));
     }
 }

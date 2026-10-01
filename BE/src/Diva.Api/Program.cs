@@ -3,11 +3,13 @@ using System.Threading.RateLimiting;
 using Diva.Api.Auth;
 using Diva.Api.Data;
 using Diva.Api.Features.Account;
+using Diva.Api.Features.AppConfig;
 using Diva.Api.Features.Customers;
 using Diva.Api.Features.Dashboard;
 using Diva.Api.Features.Orders;
 using Diva.Api.Features.Outlet;
 using Diva.Api.Features.Receipts;
+using Diva.Api.Features.Reports;
 using Diva.Api.Features.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -83,7 +85,13 @@ if (Directory.Exists(frontendPath))
 {
     var files = new PhysicalFileProvider(frontendPath);
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = files });
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = files,
+        // "no-cache" = the browser may keep a copy but must check with the server first, so a new
+        // version of a page or script is picked up right after an update.
+        OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache",
+    });
 }
 
 app.UseRateLimiter();
@@ -93,12 +101,36 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
+// Without the pages, "/" would fall through to the login-required default and answer 401, which
+// hides the real problem. Only mapped when index.html is missing: an endpoint on "/" would
+// otherwise stop the static file middleware from serving the real home page.
+if (!File.Exists(Path.Combine(frontendPath, "index.html")))
+{
+    app.Logger.LogWarning("Frontend not found at {Path}: the web pages will not be shown.", frontendPath);
+
+    app.MapGet("/", (IWebHostEnvironment env) =>
+        {
+            var message = "Halaman DIVA belum ada di server. Pastikan kode terbaru sudah di-pull.";
+            if (env.IsDevelopment())
+            {
+                message += $" Folder yang dicari: {frontendPath}";
+            }
+
+            return Results.Text(message, statusCode: StatusCodes.Status404NotFound);
+        })
+        .AllowAnonymous()
+        .ExcludeFromDescription();
+}
+
 app.MapAccountEndpoints();
+app.MapAppConfigEndpoints();
 app.MapCustomerEndpoints();
 app.MapServiceEndpoints();
 app.MapOrderEndpoints();
 app.MapDashboardEndpoints();
 app.MapOutletEndpoints();
+app.MapReportEndpoints();
 app.MapReceiptEndpoints(frontendPath);
 
 app.Run();
