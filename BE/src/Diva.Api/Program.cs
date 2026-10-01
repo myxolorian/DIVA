@@ -4,6 +4,7 @@ using Diva.Api.Auth;
 using Diva.Api.Data;
 using Diva.Api.Features.Account;
 using Diva.Api.Features.AppConfig;
+using Diva.Api.Features.Common;
 using Diva.Api.Features.Customers;
 using Diva.Api.Features.Dashboard;
 using Diva.Api.Features.Orders;
@@ -11,6 +12,7 @@ using Diva.Api.Features.Outlet;
 using Diva.Api.Features.Receipts;
 using Diva.Api.Features.Reports;
 using Diva.Api.Features.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using QuestPDF.Infrastructure;
@@ -60,7 +62,27 @@ builder.Services.AddRateLimiter(options =>
 var frontendPath = Path.GetFullPath(Path.Combine(
     builder.Environment.ContentRootPath, builder.Configuration["Frontend:Path"] ?? "wwwroot"));
 
+// Nothing DIVA receives is large (an order is a few KB of JSON).
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 1_000_000);
+
 var app = builder.Build();
+
+// Behind a hosting proxy (Render), every request arrives from the proxy's address over plain
+// http. These headers carry the visitor's real IP and the original https. Only trusted when
+// Proxy:TrustForwardedHeaders is set, because without a proxy in front anyone could send them
+// to pose as another IP. ForwardLimit = 1 reads only the entry the proxy itself added.
+if (app.Configuration.GetValue<bool>(ProxySettings.TrustForwardedHeaders))
+{
+    var forwarded = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1,
+    };
+    // The proxy's own address changes, so it is not listed; the setting above is the trust switch.
+    forwarded.KnownIPNetworks.Clear();
+    forwarded.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwarded);
+}
 
 if (app.Configuration.IsDevBypassEnabled())
 {
@@ -74,7 +96,12 @@ if (!app.Environment.IsDevelopment())
     // Unexpected errors become a plain 500 ProblemDetails instead of leaking a stack trace.
     // (In Development the detailed error page is shown instead.)
     app.UseExceptionHandler();
+
+    // HSTS: once a browser has seen DIVA over https, it never uses plain http for it again.
+    app.UseHsts();
 }
+
+app.UseSecurityHeaders(app.Configuration);
 
 // Empty error responses such as 401 or 404 get a ProblemDetails body too.
 app.UseStatusCodePages();
@@ -137,3 +164,9 @@ app.Run();
 
 // Exposed so integration tests can use WebApplicationFactory<Program>.
 public partial class Program;
+
+/// <summary>Configuration keys for running behind a reverse proxy.</summary>
+public static class ProxySettings
+{
+    public const string TrustForwardedHeaders = "Proxy:TrustForwardedHeaders";
+}

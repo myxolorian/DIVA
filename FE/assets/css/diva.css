@@ -158,6 +158,15 @@ button.list-row:hover, a.list-row:hover { background: #faf9f6; }
 .list-row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-row .sub { font-size: 0.85rem; color: var(--diva-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-row.selected { background: var(--diva-primary-soft); }
+/* A row with its own action button at the end (e.g. delete in the customer list). */
+.list-row.split { padding: 0; gap: 0; align-items: stretch; }
+.list-row.split > .main {
+  display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 0; padding: 0.85rem 0.5rem 0.85rem 1rem;
+  background: none; border: 0; color: inherit; text-align: left;
+}
+.list-row.split:hover { background: #faf9f6; }
+.row-action { flex: none; width: 3.25rem; background: none; border: 0; color: var(--diva-muted); }
+.row-action:hover, .row-action:focus-visible { color: #b42318; background: #fdecea; }
 
 .avatar {
   width: 2.6rem; height: 2.6rem; border-radius: 50%; flex: none;
@@ -299,9 +308,11 @@ a.status-tile:hover .stat { border-color: rgba(var(--diva-primary-rgb), 0.45); }
 
 /* ---------- Receipt publik ---------- */
 .receipt-wrap { max-width: 420px; }
-.receipt-meta { display: grid; grid-template-columns: auto 1fr; column-gap: 0.75rem; row-gap: 0.15rem; margin: 0; }
-.receipt-meta dt { font-weight: normal; color: var(--diva-muted); }
-.receipt-meta dd { margin: 0; text-align: right; }
+.receipt-meta { margin: 0; }
+.receipt-meta > div { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
+.receipt-meta > div + div { margin-top: 0.15rem; }
+.receipt-meta dt { font-weight: normal; color: var(--diva-muted); flex-shrink: 0; }
+.receipt-meta dd { margin: 0; text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .receipt-line + .receipt-line { margin-top: 0.5rem; }
 
 @media (prefers-reduced-motion: reduce) {

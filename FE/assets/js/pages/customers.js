@@ -8,13 +8,30 @@ const state = { search: '', page: 1, items: [], total: 0 };
 const list = $('#list');
 const more = $('#more');
 
+// Two buttons side by side (a button may not contain another button):
+// the name opens the detail sheet, the bin deletes straight from the list.
 function row(customer) {
-  return el('button', { type: 'button', class: 'list-row', onclick: () => openDetail(customer) },
-    el('span', { class: 'avatar' }, initials(customer.name)),
-    el('span', { class: 'grow' },
-      el('span', { class: 'title d-block' }, customer.name),
-      el('span', { class: 'sub d-block' }, [customer.phone, customer.address].filter(Boolean).join(' · '))),
-    icon('bi-chevron-right', 'muted'));
+  return el('div', { class: 'list-row split' },
+    el('button', { type: 'button', class: 'main', onclick: () => openDetail(customer) },
+      el('span', { class: 'avatar' }, initials(customer.name)),
+      el('span', { class: 'grow' },
+        el('span', { class: 'title d-block' }, customer.name),
+        el('span', { class: 'sub d-block' }, [customer.phone, customer.address].filter(Boolean).join(' · ')))),
+    el('button', { type: 'button', class: 'row-action', title: 'Hapus customer', 'aria-label': `Hapus ${customer.name}`, onclick: () => deleteCustomer(customer) },
+      icon('bi-trash')));
+}
+
+async function deleteCustomer(customer) {
+  const ok = await confirmDialog(`${customer.name} akan dihapus dari daftar customer. Order lama tetap tersimpan.`,
+    { title: 'Hapus customer?', okText: 'Hapus', danger: true });
+  if (!ok) return;
+  try {
+    await api(`/api/customers/${customer.id}`, { method: 'DELETE' });
+    toast(`${customer.name} dihapus.`);
+    reload();
+  } catch (error) {
+    toast(error.message, 'danger');
+  }
 }
 
 function render() {
@@ -90,16 +107,7 @@ function openDetail(customer) {
       const saved = await openCustomerForm(customer);
       if (saved) { toast('Perubahan tersimpan.'); reload(); }
     } else if (next === 'delete') {
-      const ok = await confirmDialog(`${customer.name} akan dihapus dari daftar customer. Order lama tetap tersimpan.`, { title: 'Hapus customer?', okText: 'Hapus', danger: true });
-      if (ok) {
-        try {
-          await api(`/api/customers/${customer.id}`, { method: 'DELETE' });
-          toast(`${customer.name} dihapus.`);
-          reload();
-        } catch (error) {
-          toast(error.message, 'danger');
-        }
-      }
+      await deleteCustomer(customer);
     }
   });
   offcanvas.show();
