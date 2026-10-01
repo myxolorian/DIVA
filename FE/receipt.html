@@ -24,12 +24,14 @@
           <div class="small text-secondary" data-field="outletPhone"></div>
         </header>
 
+        <!-- One row per label + value (label left, value right). Hiding an optional row
+             (data-show) takes its label and value away together. -->
         <dl class="receipt-meta small mb-3">
-          <dt>No. Order</dt><dd data-field="orderNumber" class="fw-semibold"></dd>
-          <dt>Tanggal</dt><dd data-field="createdAt"></dd>
-          <dt data-show="dueDate">Selesai</dt><dd data-field="dueDate"></dd>
-          <dt>Customer</dt><dd data-field="customerName"></dd>
-          <dt>Telp</dt><dd data-field="customerPhone"></dd>
+          <div><dt>No. Order</dt><dd data-field="orderNumber" class="fw-semibold"></dd></div>
+          <div><dt>Tanggal</dt><dd data-field="createdAt"></dd></div>
+          <div data-show="dueDate"><dt>Selesai</dt><dd data-field="dueDate"></dd></div>
+          <div><dt>Customer</dt><dd data-field="customerName"></dd></div>
+          <div><dt>Telp</dt><dd data-field="customerPhone"></dd></div>
         </dl>
 
         <ul id="items" class="list-unstyled border-top border-bottom py-2 mb-2"></ul>
